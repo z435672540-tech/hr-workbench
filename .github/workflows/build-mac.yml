@@ -1,0 +1,52 @@
+name: Build Mac 安装包
+
+on:
+  workflow_dispatch:        # 手动触发（Actions 页面点 Run workflow）
+  push:
+    tags: ['v*']            # 推送 v 开头的 tag 时自动触发
+
+jobs:
+  build-mac:
+    runs-on: macos-latest   # GitHub 免费 macOS 云构建机
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 使用 Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: 同步最新网页版到桌面应用
+        run: cp -f index.html desktop/index.html
+
+      - name: 安装依赖
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+
+      - name: 构建 Mac 安装包 (Intel x64 + Apple Silicon arm64)
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder --mac dmg zip --x64 --arm64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-installers
+          path: |
+            desktop/release/*.dmg
+            desktop/release/*.zip
+            desktop/release/latest-mac.yml
+          if-no-files-found: error
+
+      - name: 发布到 GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/release/*.dmg
+            desktop/release/*.zip
+            desktop/release/latest-mac.yml
