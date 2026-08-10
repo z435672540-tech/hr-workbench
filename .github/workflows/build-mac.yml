@@ -5,6 +5,9 @@ on:
   push:
     tags: ['v*']            # 推送 v 开头的 tag 时自动触发
 
+permissions:
+  contents: write           # 允许发布到 GitHub Releases
+
 jobs:
   build-mac:
     runs-on: macos-latest   # GitHub 免费 macOS 云构建机
