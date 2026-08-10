@@ -527,6 +527,7 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
           <button class="btn btn-ghost" onclick="addLedgerRow()">＋ 新增一行</button>
           <button class="btn btn-ghost" onclick="dedupeLedger()">🔁 一键去重</button>
           <button class="btn btn-ghost" onclick="undoLedgerImport()">↩ 撤销导入</button>
+          <button class="btn btn-red btn-sm" onclick="clearLedger()">🗑 清空台账</button>
           <button class="btn btn-soft" onclick="exportLedger()">📤 导出Excel</button>
           <button class="btn btn-primary" onclick="importLedger()">📥 导入Excel</button>
         </div>
@@ -2026,6 +2027,15 @@ function undoLedgerImport(){
   lastImport = null;
   saveDB(); renderLedger();
   toast('已撤销最近一次导入','success');
+}
+function clearLedger(){
+  if(!DB.ledger.length){ toast('台账已是空','warn'); return; }
+  confirmBox('清空台账','将删除台账中的全部 '+DB.ledger.length+' 条记录（不影响候选人库、职位库、评分历史）。此操作不可恢复，确定继续吗？','清空',()=>{
+    const cnt = DB.ledger.length;
+    DB.ledger = [];
+    saveDB(); renderLedger(); renderWorkbench(); renderReport();
+    toast('已清空 '+cnt+' 条台账记录','success');
+  },true);
 }
 async function exportLedger(){
   const HEADERS = ['日期','姓名','电话','应聘职位','城市','面试官','面试进度','Offer','入职进度','备注'];
