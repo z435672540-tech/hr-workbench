@@ -1900,7 +1900,7 @@ function processImportedRows(rows, filename){
   if(!rows || !rows.length){ toast('文件为空或无法解析','error'); return; }
   // 智能表头识别：寻找包含 姓名/日期 等关键字的那一行（兼容 Excel 模板中前面有空行的情况）
   let headerIdx = 0;
-  const headerKeys = ['姓名','日期','电话','应聘职位','职位','城市','面试官','面试进度','入职进度','offer','备注'];
+  const headerKeys = ['姓名','日期','电话','应聘职位','职位','城市','面试官','面试进度','入职进度','offer','备注','姓名/Name','候选人','应聘者','Candidate'];
   for (let i = 0; i < Math.min(5, rows.length); i++){
     if (rows[i].some(c => headerKeys.includes(String(c).trim()))){
       headerIdx = i; break;
@@ -1908,11 +1908,26 @@ function processImportedRows(rows, filename){
   }
   const headers = rows[headerIdx].map(h=>String(h).trim());
   const dataRows = rows.slice(headerIdx + 1);
-  if (!dataRows.length){ toast('未识别到数据行','warn'); return; }
+  if (!dataRows.length){ toast('未识别到数据行（识别到的列：'+headers.slice(0,5).join(',')+'）','warn'); return; }
   lastImport = {before: DB.ledger.slice()};
-  const map = {'姓名':'name','电话':'phone','手机':'phone','应聘职位':'pos','职位':'pos','城市':'city','面试官':'interviewer','日期':'date','面试时间':'date','面试进度':'progress','入职进度':'onboard','入职状态':'onboard','Offer':'offer','offer':'offer','备注':'remark','推荐/到面':'progress'};
+  // 字段映射：兼容多种列名写法（同义词 / 中英混合 / 简繁）
+  const map = {
+    '姓名':'name','候选人':'name','应聘者':'name','名字':'name','Name':'name','NAME':'name','Candidate':'name','name':'name',
+    '电话':'phone','手机':'phone','联系电话':'phone','phone':'phone','mobile':'phone','tel':'phone',
+    '应聘职位':'pos','岗位':'pos','职位':'pos','position':'pos','job':'pos',
+    '城市':'city','地区':'city','city':'city','location':'city',
+    '面试官':'interviewer','面试官/HR':'interviewer','interviewer':'interviewer',
+    '日期':'date','面试日期':'date','日期/Date':'date','date':'date',
+    '面试时间':'date',
+    '面试进度':'progress','面试结果':'progress','进度':'progress','progress':'progress',
+    '入职进度':'onboard','入职状态':'onboard','入职':'onboard','onboard':'onboard',
+    'Offer':'offer','offer':'offer','offer状态':'offer',
+    '备注':'remark','说明':'remark','备注/Remarks':'remark','remark':'remark','notes':'remark',
+    '推荐/到面':'progress'
+  };
   let added = 0;
-  dataRows.forEach(r=>{
+  let firstRowSample = null;
+  dataRows.forEach((r, idx)=>{
     const rec = {};
     headers.forEach((h, i)=>{
       const k = map[h]||h;
@@ -1921,6 +1936,15 @@ function processImportedRows(rows, filename){
       if (k==='date' && v && !/^\d{4}-/.test(v)){
         const m = v.match(/(\d{1,2})[.\/-](\d{1,2})/);
         if (m) v = '2026-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
+        // Excel 日期序列号（如 45292）→ 转 2026-年份日期
+        if (m===null && /^\d{4,5}(\.\d+)?$/.test(v)){
+          const serial = parseFloat(v);
+          if (serial > 0 && serial < 100000){
+            const dt = new Date('1899-12-30T00:00:00Z').getTime() + serial * 86400000;
+            const d = new Date(dt);
+            v = d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+          }
+        }
       }
       if (h==='推荐/到面' && v==='通过') rec.progress = '通过';
       rec[k] = v;
@@ -1931,10 +1955,21 @@ function processImportedRows(rows, filename){
     if (rec.name){
       DB.ledger.unshift({id:uid(),date:rec.date||'',name:rec.name,phone:rec.phone||'',pos:rec.pos||'',city:rec.city||'',interviewer:rec.interviewer||'',progress:rec.progress||'',offer:rec.offer||'',onboard:rec.onboard||'',remark:rec.remark||''});
       added++;
+    }else if (idx === 0 && dataRows.length > 0){
+      firstRowSample = rec;
     }
   });
   saveDB(); renderLedger(); renderWorkbench();
-  toast((filename.endsWith('.xlsx')?'Excel':'CSV')+' 导入完成：新增 '+added+' 条记录', added?'success':'warn');
+  // 增强诊断：0 条时给出明确原因
+  if (added === 0){
+    const colsList = headers.map((h,i)=>`${h}→${map[h]||'?'}`).join(' / ');
+    const reason = !dataRows.length ? '无数据行' :
+                   !firstRowSample ? '首行无姓名' :
+                   '数据行缺少姓名（请检查首行示例：'+JSON.stringify(firstRowSample).slice(0,80)+'）';
+    toast((filename.endsWith('.xlsx')?'Excel':'CSV')+' 导入：识别到列 ['+colsList.slice(0,80)+'...] · '+reason+' · 共 '+dataRows.length+' 行未匹配','error');
+  } else {
+    toast((filename.endsWith('.xlsx')?'Excel':'CSV')+' 导入完成：新增 '+added+' 条记录','success');
+  }
 }
 function undoLedgerImport(){
   if(!lastImport){ toast('没有可撤销的最近一次导入','warn'); return; }
