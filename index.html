@@ -1948,17 +1948,31 @@ function processImportedRows(rows, filename){
     headers.forEach((h, i)=>{
       const k = matchKey(h);
       let v = String(r[i]||'').trim();
-      // 无年份日期按2026年
-      if (k==='date' && v && !/^\d{4}-/.test(v)){
-        const m = v.match(/(\d{1,2})[.\/-](\d{1,2})/);
-        if (m) v = '2026-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
-        // Excel 日期序列号（如 45292）→ 转 2026 年日期
-        if (m===null && /^\d{4,5}(\.\d+)?$/.test(v)){
-          const serial = parseFloat(v);
-          if (serial > 0 && serial < 100000){
-            const dt = new Date('1899-12-30T00:00:00Z').getTime() + serial * 86400000;
-            const d = new Date(dt);
-            v = d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+      // 日期解析：覆盖多种格式（YYYY/MM/DD、YYYY.MM.DD、YYYY-MM-DD、M/D、M.D、Excel序列号、中文"年月日"）
+      if (k==='date' && v){
+        // 完整日期：YYYY/MM/DD 或 YYYY.MM.DD 或 YYYY-MM-DD
+        let m = v.match(/^(\d{4})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})/);
+        if (m){
+          v = m[1] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[3]).padStart(2,'0');
+        } else {
+          // 中文日期：2026年1月13日 / 2026年1月
+          m = v.match(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日?$/);
+          if (m){
+            v = m[1] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[3]).padStart(2,'0');
+          } else {
+            // 无年份月日：M/D 或 M.D（如 7/11、3.22）→ 按 2026 年
+            m = v.match(/(\d{1,2})\s*[\/.\-]\s*(\d{1,2})/);
+            if (m){
+              v = '2026-' + String(m[1]).padStart(2,'0') + '-' + String(m[2]).padStart(2,'0');
+            } else if (/^\d{4,5}(\.\d+)?$/.test(v)){
+              // Excel 日期序列号（如 45292）→ 转 2026 年日期
+              const serial = parseFloat(v);
+              if (serial > 0 && serial < 100000){
+                const dt = new Date('1899-12-30T00:00:00Z').getTime() + serial * 86400000;
+                const d = new Date(dt);
+                v = d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+              }
+            }
           }
         }
       }
