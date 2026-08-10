@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hr招聘工作台</title>
+<style>
+:root{
+  --primary:#6B5DE7; --primary-soft:#EFEDFC; --primary-light:#E5E1FA;
+  --bg:#F4F5FB; --card:#FFFFFF; --line:#E6E8F2;
+  --text:#2A2E3F; --text2:#6B7089; --text3:#9AA0B8;
+  --green:#34C77B; --green-bg:#E6F7EF; --green-text:#1B9E5C;
+  --yellow:#F5B93C; --yellow-bg:#FEF6E0; --yellow-text:#B77E12;
+  --red:#F05A5A; --red-bg:#FDEBEB; --red-text:#D64545;
+  --blue:#4A90E2; --blue-bg:#E9F1FC;
+  --radius:12px; --shadow:0 2px 10px rgba(43,45,80,.06);
+  --font:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;overflow:hidden}
+button{font-family:var(--font);cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:var(--font);outline:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#D3D6E8;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ===== 布局 ===== */
+.app{display:flex;height:100vh}
+
+/* ===== 侧边栏 ===== */
+.sidebar{width:228px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;border-bottom:1px solid var(--line)}
+.brand-logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6B5DE7,#9B8CF8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
+.brand-name{font-size:15px;font-weight:700;color:var(--text)}
+.brand-ver{font-size:11px;color:var(--text3);margin-top:2px}
+.nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--text2);cursor:pointer;font-size:14px;margin-bottom:2px;transition:all .15s;user-select:none}
+.nav-item:hover{background:#F2F3FB;color:var(--text)}
+.nav-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.nav-item .ico{width:20px;text-align:center;font-size:16px}
+.nav-sub{margin-left:34px}
+.nav-sub .nav-item{padding:8px 12px;font-size:13px}
+.nav-sep{font-size:11px;color:var(--text3);padding:10px 12px 6px;letter-spacing:1px}
+.side-foot{padding:14px;border-top:1px solid var(--line)}
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--bg);cursor:pointer}
+.user-chip:hover{background:var(--primary-soft)}
+.user-ava{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.user-id{font-size:13px;font-weight:600}
+.user-hint{font-size:10px;color:var(--text3)}
+
+/* ===== 主区域 ===== */
+.main{flex:1;overflow-y:auto;padding:22px 26px 40px;position:relative}
+.page{display:none;animation:fadeIn .25s}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.page-title{font-size:20px;font-weight:700}
+.page-sub{font-size:13px;color:var(--text2);margin-top:4px}
+
+/* ===== 卡片 ===== */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line)}
+.card-pad{padding:18px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+
+/* ===== 统计卡 ===== */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+.stat{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line);padding:16px}
+.stat-label{font-size:12px;color:var(--text2);margin-bottom:8px}
+.stat-num{font-size:26px;font-weight:700;line-height:1.1}
+.stat-num small{font-size:13px;color:var(--text3);font-weight:400}
+.stat-trend{font-size:11px;margin-top:6px;color:var(--text3)}
+
+/* ===== 按钮 ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;font-size:13px;font-weight:500;transition:all .15s;border:1px solid transparent}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#5A4BD4}
+.btn-soft{background:var(--primary-soft);color:var(--primary)}
+.btn-soft:hover{background:var(--primary-light)}
+.btn-ghost{background:#fff;border-color:var(--line);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.btn-green{background:var(--green-bg);color:var(--green-text)}
+.btn-yellow{background:var(--yellow-bg);color:var(--yellow-text)}
+.btn-red{background:var(--red-bg);color:var(--red-text)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-block{width:100%;justify-content:center}
+
+/* ===== 表格 ===== */
+.table-wrap{overflow:auto;max-height:calc(100vh - 260px);border-radius:var(--radius)}
+table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;min-width:900px}
+.tbl thead th{position:sticky;top:0;background:#FAFAFE;color:var(--text2);font-weight:600;padding:11px 12px;text-align:center;border-bottom:1px solid var(--line);z-index:5;white-space:nowrap;font-size:12px}
+.tbl tbody td{padding:10px 12px;border-bottom:1px solid #F0F1F8;text-align:center;vertical-align:middle}
+.tbl tbody tr:hover{background:#FAFAFE}
+.tbl tbody tr.row-alt-date td:first-child{background:var(--green-bg)!important}
+.tbl tbody tr.row-alt-date td:first-child{color:var(--green-text)}
+.tbl .left{text-align:left}
+.th-sort{display:inline-flex;align-items:center;gap:3px;cursor:pointer;user-select:none}
+.th-arrow{font-size:9px;color:var(--text3)}
+/* 台账：删除按钮默认隐藏，悬停行显示淡红圆形减号 */
+.del-cell-btn{width:26px;height:26px;border-radius:50%;background:var(--red-bg);color:var(--red-text);font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;cursor:pointer}
+.tbl tbody tr:hover .del-cell-btn{opacity:1}
+.del-cell-btn:hover{background:var(--red);color:#fff}
+/* 台账：姓名按入职状态着色 */
+.td-name-onboard{background:var(--green-bg)!important;border-radius:6px}
+.td-name-wait{background:var(--yellow-bg)!important;border-radius:6px}
+
+/* ===== 状态徽标 ===== */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap}
+.badge-green{background:var(--green-bg);color:var(--green-text)}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow-text)}
+.badge-red{background:var(--red-bg);color:var(--red-text)}
+.badge-gray{background:#F0F1F8;color:var(--text2)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-purple{background:var(--primary-soft);color:var(--primary)}
+.lev-A{background:#6B5DE7;color:#fff;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700}
+.lev-B{background:#8C6EF0;color:#fff;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700}
+.lev-C{background:#C9CCE8;color:#555A8F;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700}
+.lev-D{background:#EDEFF7;color:#8A8FA8;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700}
+
+/* ===== 人才库列表 ===== */
+.cand-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff;cursor:pointer;transition:all .15s}
+.cand-row:hover{border-color:var(--primary);box-shadow:0 3px 12px rgba(107,93,231,.1)}
+.cand-row.selected{border-color:var(--primary);background:var(--primary-soft)}
+.cand-name{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap}
+.cand-name small{font-size:12px;color:var(--text3);font-weight:400;margin-left:6px}
+.cand-mail{font-size:12px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px}
+.cand-pos{font-size:12px;color:var(--text2);white-space:nowrap}
+.cand-score{font-size:15px;font-weight:700;color:var(--primary);white-space:nowrap}
+.cand-op{display:flex;gap:6px;flex-shrink:0}
+.flex-1{flex:1;min-width:0}
+.flex{display:flex;align-items:center;gap:10px}
+.flex-col{display:flex;flex-direction:column}
+.gap4{gap:4px}.gap8{gap:8px}.gap12{gap:12px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.mb12{margin-bottom:12px}
+.text2{color:var(--text2)}.text3{color:var(--text3)}
+.fs12{font-size:12px}.fs13{font-size:13px}.fs16{font-size:16px}
+.bold{font-weight:600}
+.nowrap{white-space:nowrap}
+
+/* ===== 工具栏 ===== */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.search-box{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 12px}
+.search-box input{border:none;flex:1;font-size:13px;background:transparent;color:var(--text)}
+.search-box:focus-within{border-color:var(--primary)}
+.select{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;color:var(--text);cursor:pointer}
+.select:focus{border-color:var(--primary)}
+
+/* ===== 弹窗 ===== */
+.modal-mask{position:fixed;inset:0;background:rgba(30,32,55,.45);z-index:100;display:none;align-items:center;justify-content:center;animation:fadeIn .2s}
+.modal-mask.show{display:flex}
+.modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(20,22,40,.25);width:92vw;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;animation:popIn .22s}
+.modal-sm{max-width:480px}
+.modal-lg{max-width:1000px}
+@keyframes popIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);flex-shrink:0}
+.modal-title{font-size:16px;font-weight:700}
+.modal-x{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:16px}
+.modal-x:hover{background:#F2F3FB;color:var(--text)}
+.modal-body{padding:20px;overflow-y:auto}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+.resume-body{line-height:1.9;font-size:13.5px;color:var(--text)}
+.resume-body h4{font-size:14px;margin:14px 0 6px;color:var(--primary)}
+.resume-body p{margin-bottom:6px}
+.resume-body ul{padding-left:20px;margin-bottom:6px}
+
+/* ===== 表单 ===== */
+.form-item{margin-bottom:14px}
+.form-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;display:block}
+.form-label .req{color:var(--red)}
+.input{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;background:#fff;color:var(--text)}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,93,231,.1)}
+textarea.input{resize:vertical;min-height:80px;line-height:1.7}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.hint{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* ===== 开关 ===== */
+.switch{position:relative;width:40px;height:22px;background:#D8DAEA;border-radius:20px;transition:all .2s;flex-shrink:0;cursor:pointer}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on{background:var(--primary)}
+.switch.on::after{left:20px}
+
+/* ===== 推荐卡片 ===== */
+.reco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.reco-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);transition:all .15s;cursor:pointer;position:relative}
+.reco-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(43,45,80,.1);border-color:var(--primary)}
+.reco-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.reco-name{font-size:16px;font-weight:700}
+.reco-reason{font-size:12px;color:var(--text2);background:var(--bg);padding:8px 10px;border-radius:8px;margin-top:8px;line-height:1.6}
+.reco-score{font-size:22px;font-weight:700;color:var(--primary)}
+.reco-tag{font-size:11px;color:var(--text2);background:var(--primary-soft);padding:2px 8px;border-radius:6px}
+
+/* ===== 进度 ===== */
+.progress{height:8px;background:#EDEFF8;border-radius:6px;overflow:hidden}
+.progress>i{display:block;height:100%;background:linear-gradient(90deg,#6B5DE7,#9B8CF8);border-radius:6px;transition:width .4s}
+.progress-bar{display:flex;align-items:center;gap:8px;margin-top:6px}
+.progress-bar .p-label{font-size:12px;color:var(--text2);width:60px;flex-shrink:0}
+.progress-bar .progress{flex:1}
+.progress-bar .p-num{font-size:12px;color:var(--text3);width:36px;text-align:right;flex-shrink:0}
+
+/* ===== 三刀四维 ===== */
+.knife-card{border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;background:#fff}
+.knife-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.knife-title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.knife-badge{font-size:11px;background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:6px;font-weight:600}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px}
+.tag{background:#F2F3FB;color:var(--text2);padding:4px 10px;border-radius:16px;font-size:12px;display:inline-flex;align-items:center;gap:5px}
+.tag .x{cursor:pointer;color:var(--text3);font-size:13px}
+.tag .x:hover{color:var(--red)}
+.tag-add{border:1px dashed #C9CCE8;background:none;color:var(--text3);padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer}
+.tag-add:hover{border-color:var(--primary);color:var(--primary)}
+.dim-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed #EDEFF8}
+.dim-row:last-child{border-bottom:none}
+.dim-name{width:130px;font-weight:600;font-size:13px;cursor:pointer;border-radius:6px;padding:4px 6px;flex-shrink:0}
+.dim-name:hover{background:var(--primary-soft);color:var(--primary)}
+.dim-slider{flex:1}
+.dim-slider input[type=range]{width:100%;accent-color:var(--primary)}
+.dim-w{width:60px;text-align:right;font-size:13px;color:var(--primary);font-weight:600}
+.dim-total{font-size:12px;color:var(--text3);text-align:right;margin-top:6px}
+
+/* ===== 台账 ===== */
+.ledger-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.stat-line{display:flex;gap:20px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.stat-line .s-item{display:flex;flex-direction:column;gap:2px}
+.stat-line .s-num{font-size:22px;font-weight:700}
+.stat-line .s-label{font-size:12px;color:var(--text2)}
+
+/* ===== Toast ===== */
+.toast-wrap{position:fixed;top:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:10px}
+.toast{background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(20,22,40,.18);padding:12px 18px;display:flex;align-items:center;gap:10px;font-size:13px;border-left:4px solid var(--primary);animation:slideIn .25s;min-width:240px}
+.toast.success{border-left-color:var(--green)}
+.toast.error{border-left-color:var(--red)}
+.toast.warn{border-left-color:var(--yellow)}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+
+/* ===== 职位卡 ===== */
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.pos-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);transition:all .15s;cursor:pointer}
+.pos-card:hover{border-color:var(--primary);box-shadow:0 6px 18px rgba(43,45,80,.1)}
+.pos-card.disabled{opacity:.55;background:#FAFAFC}
+.pos-name{font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.pos-city{font-size:12px;color:var(--text2);margin-top:4px}
+.pos-count{font-size:12px;color:var(--text2);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap}
+.pos-foot{margin-top:12px;padding-top:12px;border-top:1px dashed #EDEFF8;display:flex;gap:8px;justify-content:flex-end}
+.pos-tag{font-size:11px;background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:6px}
+
+/* ===== 报表 ===== */
+.rate-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:16px}
+.rate-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;text-align:center;box-shadow:var(--shadow)}
+.rate-num{font-size:28px;font-weight:700;color:var(--primary)}
+.rate-label{font-size:12px;color:var(--text2);margin-top:6px}
+.rate-formula{font-size:11px;color:var(--text3);margin-top:4px}
+.ask-box{display:flex;gap:10px;margin-bottom:14px}
+.ask-box .input{flex:1}
+.ask-ans{background:var(--primary-soft);border-radius:var(--radius);padding:14px 18px;font-size:13px;line-height:1.8;display:none}
+.ask-ans.show{display:block}
+
+/* ===== 历史 ===== */
+.his-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.his-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.dim-ev{margin-top:8px;border-top:1px dashed #EDEFF8;padding-top:8px}
+.dim-ev-item{display:flex;gap:8px;font-size:12px;color:var(--text2);padding:3px 0}
+.dim-ev-item b{color:var(--primary);font-weight:600;width:100px;flex-shrink:0}
+.ev-tip{position:relative;border-bottom:1px dashed #C9CCE8;cursor:help}
+.ev-tip:hover .ev-pop{display:block}
+.ev-pop{display:none;position:absolute;bottom:130%;left:0;background:#2A2E3F;color:#fff;font-size:12px;border-radius:8px;padding:8px 12px;width:260px;z-index:50;line-height:1.7;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.ev-pop::after{content:'';position:absolute;top:100%;left:16px;border:6px solid transparent;border-top-color:#2A2E3F}
+
+/* ===== 加载 ===== */
+.loading-bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:400;display:none}
+.loading-bar.show{display:block}
+.loading-bar>i{display:block;height:100%;width:30%;background:linear-gradient(90deg,transparent,#6B5DE7,transparent);animation:slide 1.1s infinite}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(400%)}}
+
+/* ===== 邮箱设置 ===== */
+.mail-status{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot-green{background:var(--green);box-shadow:0 0 0 3px rgba(52,199,123,.18)}
+.dot-gray{background:#C9CCE8}
+.seg{display:flex;background:#F0F1F8;border-radius:9px;padding:3px;gap:3px}
+.seg button{padding:6px 14px;border-radius:7px;font-size:12px;color:var(--text2)}
+.seg button.on{background:#fff;color:var(--primary);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* ===== 空状态 ===== */
+.empty{padding:50px 20px;text-align:center;color:var(--text3)}
+.empty .e-ico{font-size:42px;margin-bottom:12px}
+.empty p{font-size:13px}
+
+/* ===== 分页 ===== */
+.pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px}
+.pager button{min-width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--text2);font-size:13px;display:flex;align-items:center;justify-content:center}
+.pager button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pager button:hover:not(.on){border-color:var(--primary);color:var(--primary)}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+
+/* ===== checkbox ===== */
+.ck{width:17px;height:17px;accent-color:var(--primary);cursor:pointer}
+
+/* ===== 排序 ===== */
+.sort-btn{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);display:inline-flex;gap:2px;align-items:center}
+.sort-btn:hover{color:var(--primary)}
+</style>
+</head>
+<body>
+<div class="loading-bar" id="loadingBar"><i></i></div>
+
+<div class="app">
+  <!-- ===== 侧边栏 ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">聘</div>
+      <div>
+        <div class="brand-name">Hr招聘工作台</div>
+        <div class="brand-ver" id="verLabel">v1.0.0</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-item" data-page="workbench"><span class="ico">🏠</span><span>主工作台</span></div>
+      <div class="nav-sep">人才库</div>
+      <div class="nav-item" data-page="talent"><span class="ico">👥</span><span>人才库</span></div>
+      <div class="nav-sub">
+        <div class="nav-item" data-page="talent-fit"><span class="ico">✅</span><span>合适</span></div>
+        <div class="nav-item" data-page="talent-unfit"><span class="ico">⛔</span><span>不合适</span></div>
+        <div class="nav-item" data-page="talent-pending"><span class="ico">⏳</span><span>待定</span></div>
+      </div>
+      <div class="nav-sep">招聘流程</div>
+      <div class="nav-item" data-page="screen"><span class="ico">🔍</span><span>简历筛选</span></div>
+      <div class="nav-item" data-page="ledger"><span class="ico">📋</span><span>招聘记录台账</span></div>
+      <div class="nav-sep">职位管理</div>
+      <div class="nav-item" data-page="positions"><span class="ico">📌</span><span>职位库</span></div>
+    </nav>
+    <div class="side-foot">
+      <div class="user-chip" id="userChip" title="点击修改用户ID">
+        <div class="user-ava" id="userAva">HR</div>
+        <div class="flex-col">
+          <div class="user-id" id="userId">HR-0001</div>
+          <div class="user-hint">点击修改ID</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== 主区域 ===== -->
+  <main class="main" id="main">
+
+    <!-- ========== 主工作台 ========== -->
+    <section class="page" id="page-workbench">
+      <div class="page-head">
+        <div>
+          <div class="page-title">主工作台</div>
+          <div class="page-sub" id="wbDate"></div>
+        </div>
+        <div class="flex gap8">
+          <button class="btn btn-soft" onclick="openMailModal()">📧 邮箱设置</button>
+          <button class="btn btn-ghost" onclick="openTimerModal()">⏰ 定时筛选</button>
+          <button class="btn btn-primary" onclick="receiveMail()">📥 收取简历</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-label">在招职位</div><div class="stat-num" id="stPos">0</div><div class="stat-trend">职位库实时统计</div></div>
+        <div class="stat"><div class="stat-label">人才库简历</div><div class="stat-num" id="stCand">0</div><div class="stat-trend" id="stCandTrend"></div></div>
+        <div class="stat"><div class="stat-label">A/B级候选人</div><div class="stat-num" id="stAB">0</div><div class="stat-trend">推荐至主工作台</div></div>
+        <div class="stat"><div class="stat-label">待人工判断</div><div class="stat-num" id="stPending">0</div><div class="stat-trend">合适/待定/不合适</div></div>
+      </div>
+
+      <div class="card card-pad mb12">
+        <div class="card-title">📥 收取简历
+          <div class="flex gap8" id="mailStateBar"><span class="dot dot-gray"></span><span class="fs12 text3" id="mailStateText">未绑定邮箱</span></div>
+        </div>
+        <div class="flex gap12" style="align-items:stretch;flex-wrap:wrap">
+          <button class="btn btn-primary" style="min-width:150px" onclick="receiveMail()">📥 立即收取简历</button>
+          <div class="flex-col fs12 text2" style="justify-content:center">
+            <span id="mailHint">绑定邮箱后，可自动收取 BOSS直聘 / 猎聘 / 智联 等平台的简历邮件</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pad mb12">
+        <div class="card-title">🔍 AI 简历筛选
+          <div class="flex gap8">
+            <select class="select" id="screenScope">
+              <option value="local">本地人才库</option>
+              <option value="boss">BOSS</option>
+            </select>
+            <select class="select" id="screenPos"></select>
+            <button class="btn btn-primary" onclick="runScreening()">开始筛选</button>
+          </div>
+        </div>
+        <div class="flex gap12 flex-wrap" id="screenStat"></div>
+        <div class="mt12" id="screenProgressWrap" style="display:none">
+          <div class="flex gap12">
+            <div class="progress-bar" style="flex:1"><span class="p-label">全部职位进度</span><div class="progress"><i id="pgAll" style="width:0%"></i></div><span class="p-num" id="pgAllN">0%</span></div>
+          </div>
+          <div id="perPosProgress" class="mt8"></div>
+        </div>
+      </div>
+
+      <div class="card card-pad mb12">
+        <div class="card-title">⭐ A/B 级候选人推荐
+          <span class="fs12 text3">点击卡片查看简历 · 可直接判断合适/待定/不合适</span>
+        </div>
+        <div class="reco-grid" id="recoGrid"></div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="card-title">📌 招聘任务速览
+          <button class="btn btn-ghost btn-sm" onclick="go('ledger')">进入台账 →</button>
+        </div>
+        <div class="stat-line" id="wbQuickStats"></div>
+      </div>
+
+      <div class="card card-pad mt12">
+        <div class="card-title">💾 数据管理 <span class="fs12 text3">本地保存 · 支持备份、恢复与迁移 · 分享前请导出数据后清空</span></div>
+        <div class="flex gap8 flex-wrap">
+          <button class="btn btn-ghost btn-sm" onclick="backupData()">📤 备份数据</button>
+          <button class="btn btn-ghost btn-sm" onclick="restoreData()">📥 恢复数据</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetData()">🧹 清空演示数据</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 人才库 ========== -->
+    <section class="page" id="page-talent">
+      <div class="page-head">
+        <div>
+          <div class="page-title" id="talentTitle">人才库</div>
+          <div class="page-sub" id="talentSub"></div>
+        </div>
+        <div class="flex gap8">
+          <button class="btn btn-ghost" onclick="openUploadModal()">⬆ 手动上传简历</button>
+          <button class="btn btn-ghost" onclick="openMailModal()">📧 邮箱收取</button>
+          <button class="btn btn-soft" onclick="exportTalent()">📤 导出</button>
+          <button class="btn btn-red" id="batchDelBtn" style="display:none" onclick="batchDeleteTalent()">🗑 批量删除</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="flex gap4 fs12 text2 nowrap"><input type="checkbox" class="ck" id="ckAll" onchange="toggleAll()"> 全选</label>
+        <div class="search-box">🔍<input id="talentSearch" placeholder="搜索姓名 / 职位 / 邮件标题…" oninput="renderTalent()"></div>
+        <select class="select" id="talentPosFilter" onchange="renderTalent()">
+          <option value="">全部职位</option>
+        </select>
+        <select class="select" id="talentStatusFilter" onchange="renderTalent()">
+          <option value="">全部状态</option>
+          <option value="new">未判断</option>
+          <option value="fit">合适</option>
+          <option value="pending">待定</option>
+          <option value="unfit">不合适</option>
+        </select>
+        <select class="select" id="talentLevelFilter" onchange="renderTalent()">
+          <option value="">全部等级</option>
+          <option value="A">A级</option>
+          <option value="B">B级</option>
+          <option value="C">C级</option>
+          <option value="D">D级</option>
+        </select>
+      </div>
+      <div class="flex gap8 fs12 text3 mb12" id="batchBar" style="display:none">
+        <span>已选 <b id="selCount" style="color:var(--primary)">0</b> 份</span>
+        <span>·</span><span class="text3">勾选后支持批量删除 / 批量判断</span>
+      </div>
+      <div id="talentList"></div>
+      <div class="pager" id="talentPager"></div>
+    </section>
+
+    <!-- ========== 简历筛选 ========== -->
+    <section class="page" id="page-screen">
+      <div class="page-head">
+        <div>
+          <div class="page-title">简历筛选</div>
+          <div class="page-sub">三刀筛选 + 四维评分 · 规则实时读取职位库 · 每项评分保留命中证据</div>
+        </div>
+        <div class="flex gap8">
+          <select class="select" id="screenScope2">
+            <option value="local">本地人才库</option>
+            <option value="boss">BOSS</option>
+          </select>
+          <select class="select" id="screenPos2"></select>
+          <button class="btn btn-ghost" onclick="openTimerModal()">⏰ 定时筛选</button>
+          <button class="btn btn-primary" onclick="runScreening()">▶ 执行筛选</button>
+        </div>
+      </div>
+
+      <div class="flex gap8 mb12 flex-wrap">
+        <button class="btn btn-soft btn-sm" data-tab="rules" onclick="screenTab('rules')">筛选规则</button>
+        <button class="btn btn-ghost btn-sm" data-tab="results" onclick="screenTab('results')">筛选结果</button>
+      </div>
+
+      <div id="screenTab-rules">
+        <div class="card card-pad mb12">
+          <div class="card-title">⚙ 规则总开关</div>
+          <div class="flex gap12 flex-wrap">
+            <div class="flex gap8"><span class="fs13">三刀筛选</span><div class="switch on" id="swKnife" onclick="toggleSwitch(this,'knife')"></div></div>
+            <div class="flex gap8"><span class="fs13">四维评分</span><div class="switch on" id="swDim" onclick="toggleSwitch(this,'dim')"></div></div>
+            <div class="flex gap8"><span class="fs13">等级自动归档</span><div class="switch on" id="swAuto" onclick="toggleSwitch(this,'auto')"></div></div>
+            <div class="fs12 text3" style="align-self:center">关闭后只参考职位 JD 和筛选要求进行评分</div>
+          </div>
+        </div>
+        <div id="knifeCards"></div>
+        <div class="card card-pad">
+          <div class="card-title">📊 四维评分规则 <span class="fs12 text3">右键点击维度名称可编辑 · 权重滑块调整 · 自动归一100%</span></div>
+          <div id="dimRows"></div>
+          <div class="dim-total" id="dimTotal"></div>
+        </div>
+      </div>
+
+      <div id="screenTab-results" style="display:none">
+        <div class="stat-line" id="screenResultStat"></div>
+        <div id="screenResultList"></div>
+      </div>
+    </section>
+
+    <!-- ========== 招聘记录台账 ========== -->
+    <section class="page" id="page-ledger">
+      <div class="page-head">
+        <div>
+          <div class="page-title">招聘记录台账</div>
+          <div class="page-sub">类 Excel 直接编辑表格 · 修改后统计数据立即更新</div>
+        </div>
+        <div class="flex gap8" id="ledgerHeadBtns" style="display:none">
+          <button class="btn btn-ghost" onclick="addLedgerRow()">＋ 新增一行</button>
+          <button class="btn btn-ghost" onclick="dedupeLedger()">🔁 一键去重</button>
+          <button class="btn btn-ghost" onclick="undoLedgerImport()">↩ 撤销导入</button>
+          <button class="btn btn-soft" onclick="exportLedger()">📤 导出Excel</button>
+          <button class="btn btn-primary" onclick="importLedger()">📥 导入Excel</button>
+        </div>
+      </div>
+      <div class="flex gap8 mb12 flex-wrap">
+        <button class="btn btn-soft btn-sm" data-ltab="table" onclick="ledgerTab('table')">📋 台账表格</button>
+        <button class="btn btn-ghost btn-sm" data-ltab="report" onclick="ledgerTab('report')">📈 数据报表</button>
+        <button class="btn btn-ghost btn-sm" data-ltab="history" onclick="ledgerTab('history')">🕘 评分记录历史</button>
+      </div>
+      <div id="ledgerTab-table">
+        <div class="stat-line" id="ledgerStat"></div>
+        <div class="ledger-toolbar">
+          <input type="date" class="input" id="ledgerDateFrom" style="width:150px" onchange="renderLedger()"> <span class="text3">至</span>
+          <input type="date" class="input" id="ledgerDateTo" style="width:150px" onchange="renderLedger()">
+          <select class="select" id="ledgerPosFilter" onchange="renderLedger()"><option value="">全部职位</option></select>
+          <select class="select" id="ledgerProgressFilter" onchange="renderLedger()"><option value="">全部面试进度</option></select>
+          <div class="flex gap4" style="margin-left:auto">
+            <button class="btn btn-ghost btn-sm" id="sortAscBtn" onclick="setLedgerSort('asc')">日期升序 ↑</button>
+            <button class="btn btn-ghost btn-sm" id="sortDescBtn" onclick="setLedgerSort('desc')">日期倒序 ↓</button>
+            <button class="btn btn-red btn-sm" onclick="batchDelLedger()">批量删除</button>
+          </div>
+        </div>
+        <div class="card table-wrap" style="box-shadow:var(--shadow);border:1px solid var(--line)">
+          <table class="tbl" id="ledgerTable">
+            <thead>
+              <tr>
+                <th style="width:36px"><input type="checkbox" class="ck" id="ckLedgerAll" onchange="toggleLedgerAll(this)"></th>
+                <th>日期<span class="th-arrow" style="margin-left:2px">▼</span></th>
+                <th>姓名</th>
+                <th>电话</th>
+                <th>应聘职位</th>
+                <th>城市</th>
+                <th>面试官</th>
+                <th>面试进度</th>
+                <th>入职进度</th>
+                <th>Offer状态</th>
+                <th>备注</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+        <div class="mt12" id="ledgerBottomBar"></div>
+      </div>
+      <div id="ledgerTab-report" style="display:none">
+        <div class="stat-line" id="reportStat"></div>
+        <div class="toolbar">
+          <input type="date" class="input" id="reportDateFrom" style="width:150px" onchange="renderReport()"> <span class="text3">至</span>
+          <input type="date" class="input" id="reportDateTo" style="width:150px" onchange="renderReport()">
+          <select class="select" id="reportPosFilter" onchange="renderReport()"><option value="">全部职位</option></select>
+        </div>
+        <div class="rate-cards" id="rateCards"></div>
+        <div class="card card-pad">
+          <div class="card-title">💬 自然语言查询 <span class="fs12 text3">回答基于台账真实数据，不编造</span></div>
+          <div class="ask-box">
+            <input class="input" id="nlQuery" placeholder="试试：二面通过率是多少？/ 开发岗位的入职情况 / 分析7月的面试情况 / 张伟是多少号面试的？" onkeydown="if(event.key==='Enter')askNL()">
+            <button class="btn btn-primary" onclick="askNL()">查询</button>
+          </div>
+          <div class="ask-ans" id="nlAnswer"></div>
+          <div class="fs12 text3 mt8">常用问题：<span class="reco-tag" style="cursor:pointer" onclick="quickAsk('二面通过率是多少？')">二面通过率是多少？</span> <span class="reco-tag" style="cursor:pointer" onclick="quickAsk('开发岗位的入职情况')">开发岗位的入职情况</span> <span class="reco-tag" style="cursor:pointer" onclick="quickAsk('分析7月的面试情况')">分析7月的面试情况</span></div>
+        </div>
+      </div>
+      <div id="ledgerTab-history" style="display:none">
+        <div class="toolbar">
+          <div class="search-box">🔍<input id="hisSearch" placeholder="搜索姓名 / 职位 / 来源…" oninput="renderHistory()"></div>
+          <select class="select" id="hisPosFilter" onchange="renderHistory()"><option value="">全部职位</option></select>
+          <select class="select" id="hisLevelFilter" onchange="renderHistory()"><option value="">全部等级</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        </div>
+        <div id="hisList"></div>
+      </div>
+    </section>
+
+    <!-- ========== 职位库 ========== -->
+    <section class="page" id="page-positions">
+      <div class="page-head">
+        <div>
+          <div class="page-title">职位库</div>
+          <div class="page-sub">职位修改后，简历筛选规则实时同步 · 支持新增、编辑、停用</div>
+        </div>
+        <div class="flex gap8">
+          <button class="btn btn-ghost" onclick="importPositions()">📥 导入职位</button>
+          <button class="btn btn-primary" onclick="openPosModal()">＋ 新增职位</button>
+        </div>
+      </div>
+      <div class="pos-grid" id="posGrid"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== 简历预览弹窗 ===== -->
+<div class="modal-mask" id="resumeMask" onclick="if(event.target===this)closeModal('resumeMask')">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div class="modal-title" id="resumeTitle"></div>
+      <div class="flex gap8">
+        <button class="btn btn-green btn-sm" onclick="judgeCand('fit')">合适</button>
+        <button class="btn btn-yellow btn-sm" onclick="judgeCand('pending')">待定</button>
+        <button class="btn btn-red btn-sm" onclick="judgeCand('unfit')">不合适</button>
+        <button class="modal-x" onclick="closeModal('resumeMask')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="resumeBody"></div>
+  </div>
+</div>
+
+<!-- ===== 职位编辑弹窗 ===== -->
+<div class="modal-mask" id="posMask" onclick="if(event.target===this)closeModal('posMask')">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div class="modal-title" id="posModalTitle">新增职位</div>
+      <button class="modal-x" onclick="closeModal('posMask')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="posEditId">
+      <div class="form-grid">
+        <div class="form-item"><label class="form-label">职位名称 <span class="req">*</span></label><input class="input" id="posName" placeholder="如：开发"></div>
+        <div class="form-item"><label class="form-label">城市</label><input class="input" id="posCity" placeholder="如：北京 / 上海"></div>
+      </div>
+      <div class="form-item"><label class="form-label">职位 JD</label><textarea class="input" id="posJd" placeholder="职位描述、职责与要求…"></textarea></div>
+      <div class="form-grid">
+        <div class="form-item"><label class="form-label">硬性要求</label><textarea class="input" id="posHard" placeholder="学历、经验年限、行业等硬性门槛…"></textarea></div>
+        <div class="form-item"><label class="form-label">简历筛选要求</label><textarea class="input" id="posScreen" placeholder="筛选简历时需要重点关注的条件…"></textarea></div>
+      </div>
+      <div class="form-item"><label class="form-label">BOSS 招呼话术</label><textarea class="input" id="posBoss" placeholder="在BOSS直聘上主动打招呼的话术…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('posMask')">取消</button>
+      <button class="btn btn-primary" onclick="savePos()">保存职位</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 邮箱设置弹窗 ===== -->
+<div class="modal-mask" id="mailMask" onclick="if(event.target===this)closeModal('mailMask')">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">📧 邮箱收取设置</div>
+      <button class="modal-x" onclick="closeModal('mailMask')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mail-status" id="mailStatusLine">
+        <span class="dot dot-gray" id="mailDot"></span>
+        <span id="mailStatusText">未绑定邮箱</span>
+      </div>
+      <div class="form-item"><label class="form-label">邮箱地址</label><input class="input" id="mailAddr" placeholder="用于接收招聘平台简历邮件"></div>
+      <div class="form-item"><label class="form-label">安全码 / 授权码</label><input class="input" type="password" id="mailPwd" placeholder="非明文保存，仅用于收取"></div>
+      <div class="form-item">
+        <label class="form-label">自动收取</label>
+        <div class="seg" id="autoSeg">
+          <button data-v="off" onclick="setAuto('off')">关闭</button>
+          <button data-v="12" onclick="setAuto('12')">每12小时</button>
+          <button data-v="24" onclick="setAuto('24')">每24小时</button>
+        </div>
+      </div>
+      <div class="hint">只导入来自 BOSS直聘、猎聘、智联招聘等平台的简历邮件；使用增量同步，已检查邮件不重复读取。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mailMask')">取消</button>
+      <button class="btn btn-primary" onclick="saveMail()">保存绑定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 定时筛选弹窗 ===== -->
+<div class="modal-mask" id="timerMask" onclick="if(event.target===this)closeModal('timerMask')">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">⏰ 每日定时筛选</div>
+      <button class="modal-x" onclick="closeModal('timerMask')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item"><label class="form-label">每日筛选时间</label><input class="input" type="time" id="timerTime" value="09:00"></div>
+      <div class="form-item">
+        <label class="form-label">开关</label>
+        <div class="flex gap8" style="align-items:center">
+          <div class="switch" id="swTimer" onclick="toggleSwitch(this,'timer')"></div>
+          <span class="fs12 text3" id="timerStateText">已关闭</span>
+        </div>
+      </div>
+      <div class="hint">到点自动对人才库执行一次简历筛选，A/B级候选人将推荐到主工作台。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('timerMask')">取消</button>
+      <button class="btn btn-primary" onclick="saveTimer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 上传弹窗 ===== -->
+<div class="modal-mask" id="uploadMask" onclick="if(event.target===this)closeModal('uploadMask')">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">⬆ 手动上传简历</div>
+      <button class="modal-x" onclick="closeModal('uploadMask')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item"><label class="form-label">选择简历文件（支持单份或多份）</label>
+        <input class="input" type="file" id="uploadFiles" multiple accept=".pdf,.doc,.docx,.txt,.html" onchange="handleUpload(this)">
+      </div>
+      <div class="form-item"><label class="form-label">上传后默认职位分类</label>
+        <select class="select" id="uploadPos" style="width:100%"></select>
+      </div>
+      <div class="hint">支持 PDF / Word / 文本简历；上传后可手动调整职位分类。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('uploadMask')">取消</button>
+      <button class="btn btn-primary" onclick="doUpload()">确认上传</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 用户ID弹窗 ===== -->
+<div class="modal-mask" id="uidMask" onclick="if(event.target===this)closeModal('uidMask')">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div class="modal-title">修改用户 ID</div>
+      <button class="modal-x" onclick="closeModal('uidMask')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item"><label class="form-label">自定义用户 ID</label><input class="input" id="uidInput" placeholder="例如：HR-9527"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('uidMask')">取消</button>
+      <button class="btn btn-primary" onclick="saveUid()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 确认弹窗 ===== -->
+<div class="modal-mask" id="confirmMask">
+  <div class="modal modal-sm">
+    <div class="modal-head"><div class="modal-title" id="cfTitle">确认操作</div><button class="modal-x" onclick="closeModal('confirmMask')">✕</button></div>
+    <div class="modal-body"><div id="cfMsg" class="fs13" style="line-height:1.8"></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('confirmMask')">取消</button>
+      <button class="btn btn-primary" id="cfOkBtn" onclick="cfOk()">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ================================================================
+ * Hr招聘工作台 v1.0.0 — 本地数据持久化版本
+ * ================================================================ */
+const APP_VERSION = 'v1.0.0';
+const LS_KEY = 'hr_workbench_v1';
+const PAGE_SIZE = 20;
+
+/* ---------- 示例数据（首次运行时初始化，后续全部保存在本地） ---------- */
+function seedData(){
+  const positions = [
+    {id:'p1',name:'开发',city:'北京',jd:'负责公司产品前后端开发，参与需求评审与技术方案设计，保障交付质量与进度。',hard:'统招本科及以上，3年以上开发经验。',screen:'熟悉主流技术栈，有完整项目交付经验。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，我司正在招聘开发岗位，看到您的经历非常匹配，方便聊聊吗？',active:true},
+    {id:'p2',name:'转化',city:'上海',jd:'负责线索转化与客户跟进，推动成交，完成业绩指标。',hard:'大专及以上，1年以上销售/转化经验。',screen:'有电话销售或在线转化经验优先，抗压能力强。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，我司转化岗位正在热招，您有相关经验，期待与您进一步沟通！',active:true},
+    {id:'p3',name:'SMB销售经理',city:'深圳',jd:'带领销售团队开拓中小企业客户，制定团队目标，负责团队培训与业绩管理。',hard:'本科及以上，2年以上销售团队管理经验。',screen:'有带领团队、搭建团队经验，能制定团队目标。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，看到您有销售团队管理经验，我们SMB销售经理岗位与您高度匹配！',active:true},
+    {id:'p4',name:'销售顾问',city:'广州',jd:'面向企业客户销售产品与服务，完成个人业绩指标。',hard:'大专及以上，有销售经验。',screen:'沟通能力强，有ToB销售经验优先。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，我们销售顾问岗位底薪+高提成，期待与您沟通！',active:true},
+    {id:'p5',name:'行业顾问',city:'杭州',jd:'深耕细分行业客户，提供解决方案咨询与销售支持。',hard:'本科及以上，有行业解决方案经验。',screen:'有行业客户资源，能理解客户业务场景。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，行业顾问岗位需要深耕行业经验，看了您的背景很合适！',active:true},
+    {id:'p6',name:'售后',city:'成都',jd:'负责客户售后服务，处理问题工单，提升客户满意度。',hard:'大专及以上，服务意识强。',screen:'耐心细致，沟通能力强。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，我们售后岗位在招，期待沟通！',active:true}
+  ];
+  const cands = [];
+  const mk = (id,name,age,title,pos,work,score,level,status,extra='') => ({
+    id,name,age,emailTitle:title,pos,source:'BOSS直聘',
+    work,score,level,status, reason:'',failReason:'',extra, createdAt: Date.now() - Math.floor(Math.random()*86400000*30)
+  });
+  // 示例候选人（A/B/C/D 混合）
+  cands.push(mk('c1','张伟',29,'【BOSS直聘】张伟-5年ToB大客户销售-北京','开发',
+    '2019-2024 北京云启科技 高级客户经理\n负责企业级SaaS产品的客户开拓与维护，累计完成回款额860万元，年度业绩达成率135%，连续两年获团队销冠。曾带领3人小组搭建华东区域客户网络，负责新人招聘与培训。\n2016-2019 北京蓝海信息 销售代表\n负责中小企业客户跟进，月均签约8家客户。',8.2,'A','new', '3年ToB大客户经验+管理经历+量化业绩'));
+  cands.push(mk('c2','李娜',26,'【猎聘】李娜-转化运营-上海','转化',
+    '2021-2024 上海聚客网络 转化专员\n负责线上线索电话转化，月均转化率28%，个人业绩回款额120万，连续6个月达成率110%以上。\n2020-2021 上海云舟 客服专员\n处理客户咨询与售后问题。',7.6,'A','new','转化经验+量化数据，但早期客服经历需关注'));
+  cands.push(mk('c3','王强',33,'【智联招聘】王强-销售经理-深圳','SMB销售经理',
+    '2017-2024 深圳启明科技 销售主管\n带领8人销售团队，负责制定团队目标与招聘培训，团队年业绩3200万，个人带领团队实现180%目标达成率。\n2014-2017 深圳星河 销售顾问\n面向中小企业销售，连续12个月业绩达成率超100%。',8.8,'A','new','真实管理经验+团队业绩+量化证据'));
+  cands.push(mk('c4','赵敏',24,'【BOSS直聘】赵敏-销售顾问-广州','销售顾问',
+    '2022-2024 广州拓客网络 销售顾问\n面向企业客户销售推广服务，月均签约6家，业绩达成率105%，个人年回款额68万。',6.8,'B','new','有ToB销售经验+量化数据'));
+  cands.push(mk('c5','陈浩',31,'【猎聘】陈浩-行业顾问-杭州','行业顾问',
+    '2018-2024 杭州数智云 行业顾问\n深耕教育行业客户，提供数据解决方案，年度业绩达成率120%，回款额500万，服务客户30余家。',7.2,'B','new','行业深耕+量化业绩'));
+  cands.push(mk('c6','刘洋',27,'【BOSS直聘】刘洋-开发工程师-北京','开发',
+    '2020-2024 北京中科软 开发工程师\n负责企业级系统研发，主导3个大型项目交付，管理5人开发小组，负责团队任务分配与新人培养。',6.5,'B','new','技术背景+项目管理经验'));
+  cands.push(mk('c7','孙丽',25,'【智联招聘】孙丽-转化专员-上海','转化',
+    '2021-2024 上海优单 转化专员\n负责平台线索转化，月均转化率22%，个人业绩90万。',5.8,'B','new','转化经验+量化数据'));
+  cands.push(mk('c8','周杰',29,'【BOSS直聘】周杰-大客户销售-北京','销售顾问',
+    '2019-2024 北京云联 大客户销售\n负责企业客户销售，年回款额300万，业绩达成率115%。',5.2,'B','new','ToB销售经验'));
+  cands.push(mk('c9','吴倩',23,'【猎聘】吴倩-行政助理-成都','售后',
+    '2023-2024 成都某公司 行政助理\n负责日常行政事务、档案管理与接待。',3.2,'C','new','行政背景，非销售岗位，可入库观察'));
+  cands.push(mk('c10','郑军',35,'【BOSS直聘】郑军-零售门店经理-重庆','SMB销售经理',
+    '2015-2024 重庆某零售连锁 门店经理\n负责门店零售销售，管理门店店员10人，门店年销售额2000万。',4.0,'D','new','ToC零售行业，第一刀排除', '零售行业'));
+  cands.push(mk('c11','冯雨',28,'【智联招聘】冯雨-客服主管-武汉','转化',
+    '2018-2024 武汉某电商 客服主管\n负责客服团队管理，处理客户投诉，团队10人。',3.5,'D','new','全部经历为客服，第二刀排除', '客服'));
+  cands.push(mk('c12','杨先生',30,'【BOSS直聘】杨先生-销售-苏州','销售顾问',
+    '2018-2024 苏州某科技公司 销售\n负责产品销售工作，业绩表现良好。',4.8,'C','new','销售经历但量化数据不足'));
+  cands.push(mk('c13','林晓',27,'【猎聘】林晓-售前顾问-南京','行业顾问',
+    '2019-2024 南京某软件 售前顾问\n负责售前方案讲解与技术支持。',3.8,'C','new','售前经历，非销售主导'));
+  cands.push(mk('c14','黄磊',26,'【BOSS直聘】黄磊-AI产品运营-杭州','转化',
+    '2020-2024 杭州智能云 AI产品运营\n负责AI产品用户增长与转化，月均转化率25%，使用AI工具提升效率30%，回款额150万。',7.9,'A','new','AI能力+转化经验+量化数据'));
+  cands.push(mk('c15','徐芳',32,'【猎聘】徐芳-外贸经理-宁波','SMB销售经理',
+    '2014-2024 宁波某外贸公司 外贸经理\n带领6人外贸团队，负责海外客户开拓，团队年出口额5000万，负责招聘培训与团队目标制定。',7.4,'B','new','管理经验+业绩量化，需确认ToB背景'));
+  const ledger = [
+    {id:'l1',date:'2026-07-08',name:'张伟',phone:'138****1234',pos:'开发',city:'北京',interviewer:'',progress:'通过',offer:'接受',onboard:'已入职',remark:'面试表现优秀'},
+    {id:'l2',date:'2026-07-15',name:'李娜',phone:'139****5678',pos:'转化',city:'上海',interviewer:'',progress:'待复试',offer:'',onboard:'',remark:'初面通过'},
+    {id:'l3',date:'2026-07-20',name:'王强',phone:'137****9012',pos:'SMB销售经理',city:'深圳',interviewer:'',progress:'通过',offer:'接受',onboard:'待入职',remark:'背调通过'},
+    {id:'l4',date:'2026-07-25',name:'赵敏',phone:'136****3456',pos:'销售顾问',city:'广州',interviewer:'',progress:'一面不通过',offer:'',onboard:'',remark:'表达一般'},
+    {id:'l5',date:'2026-08-02',name:'陈浩',phone:'135****7890',pos:'行业顾问',city:'杭州',interviewer:'',progress:'待谈薪',offer:'待发',onboard:'',remark:'谈薪中'},
+    {id:'l6',date:'2026-08-05',name:'黄磊',phone:'134****2345',pos:'转化',city:'杭州',interviewer:'',progress:'通过',offer:'接受',onboard:'待入职',remark:'AI背景加分'},
+    {id:'l7',date:'2026-08-08',name:'徐芳',phone:'133****6789',pos:'SMB销售经理',city:'宁波',interviewer:'',progress:'待背调',offer:'',onboard:'',remark:''},
+    {id:'l8',date:'2026-08-09',name:'孙丽',phone:'132****0123',pos:'转化',city:'上海',interviewer:'',progress:'二面不通过',offer:'',onboard:'',remark:'行业认知不足'}
+  ];
+  return {version:APP_VERSION, userId:'HR-0001', email:{bound:false,addr:'',auto:'off',interval:24},
+    positions, candidates:cands, ledger,
+    timer:{enabled:false,time:'09:00'},
+    knives:{knife1:'ToC行业排除',knife2:'非销售经历排除',knife3:'量化实锤'},
+    dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],
+    sw:{knife:true,dim:true,auto:true},
+    history:[], lastScreen:null, ledgerSort:'desc', uploadedResume:null};
+}
+
+/* ---------- 状态管理 ---------- */
+let DB = null;
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ DB = JSON.parse(raw); }
+  }catch(e){}
+  if(!DB){ DB = seedData(); saveDB(); }
+  // 版本保留
+  DB.version = APP_VERSION;
+}
+function saveDB(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch(e){} }
+function uid(){ return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+/* ---------- 工具 ---------- */
+function $(s){ return document.querySelector(s); }
+function $$(s){ return document.querySelectorAll(s); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg,type='info'){
+  const w = $('#toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast '+type;
+  t.innerHTML = '<span>'+(type==='success'?'✅':type==='error'?'❌':type==='warn'?'⚠️':'💡')+'</span><span>'+esc(msg)+'</span>';
+  w.appendChild(t);
+  setTimeout(()=>{ t.style.transition='all .3s'; t.style.opacity='0'; t.style.transform='translateX(30px)'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+let cfCallback = null;
+function confirmBox(title,msg,okText,cb, danger=false){
+  $('#cfTitle').textContent = title;
+  $('#cfMsg').textContent = msg;
+  $('#cfOkBtn').textContent = okText||'确定';
+  $('#cfOkBtn').className = 'btn '+(danger?'btn-red':'btn-primary');
+  cfCallback = cb;
+  showModal('confirmMask');
+}
+function cfOk(){ closeModal('confirmMask'); if(cfCallback) cfCallback(); }
+function showModal(id){ $('#'+id).classList.add('show'); }
+function closeModal(id){ $('#'+id).classList.remove('show'); }
+function showLoading(){ $('#loadingBar').classList.add('show'); }
+function hideLoading(){ $('#loadingBar').classList.remove('show'); }
+function go(page){
+  const valid = ['workbench','talent','talent-fit','talent-unfit','talent-pending','screen','ledger','positions'];
+  if(!valid.includes(page)) page='talent';
+  $$('.nav-item').forEach(n=>n.classList.remove('active'));
+  $$('.nav-item[data-page]').forEach(n=>{ if(n.dataset.page===page) n.classList.add('active'); });
+  $$('.page').forEach(p=>p.classList.remove('active'));
+  const target = page.startsWith('talent') ? 'talent' : page;
+  const sec = $('#page-'+target);
+  if(sec) sec.classList.add('active');
+  // 人才库子页签
+  if(page.startsWith('talent')){
+    const sub = page.split('-')[1]||'';
+    DB._talentFilter = sub;
+    talentPage = 1;
+    $('#talentTitle').textContent = sub==='fit'?'人才库 · 合适':sub==='unfit'?'人才库 · 不合适':sub==='pending'?'人才库 · 待定':'人才库';
+    $('#talentSub').textContent = '点击候选人卡片可查看完整简历';
+  }
+  if(page==='screen') screenTab('rules');
+  renderAll(page);
+}
+
+/* ================================================================
+ * 渲染：主工作台
+ * ================================================================ */
+function renderWorkbench(){
+  const d = new Date();
+  $('#wbDate').textContent = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  const pos = DB.positions.filter(p=>p.active);
+  const cands = DB.candidates;
+  $('#stPos').textContent = pos.length;
+  $('#stCand').textContent = cands.length;
+  const ab = cands.filter(c=>['A','B'].includes(c.level) && c.status==='new');
+  $('#stAB').textContent = ab.length;
+  $('#stPending').textContent = cands.filter(c=>c.status==='new').length;
+  // 邮箱状态
+  if(DB.email.bound){ $('#mailStateBar').innerHTML = '<span class="dot dot-green"></span><span class="fs12" style="color:var(--green-text)">已绑定 '+esc(DB.email.addr)+'</span>'; }
+  else { $('#mailStateBar').innerHTML = '<span class="dot dot-gray"></span><span class="fs12 text3">未绑定邮箱</span>'; }
+  // 筛选统计
+  const last = DB.lastScreen;
+  $('#screenStat').innerHTML = last ? `
+    <div class="stat" style="box-shadow:none;border:1px solid var(--line)"><div class="stat-label">本次筛选</div><div class="stat-num">${last.total}</div></div>
+    <div class="stat" style="box-shadow:none;border:1px solid var(--line)"><div class="stat-label">已筛选</div><div class="stat-num">${last.done}</div></div>
+    <div class="stat" style="box-shadow:none;border:1px solid var(--line)"><div class="stat-label">待筛选</div><div class="stat-num">${Math.max(0,last.total-last.done)}</div></div>` :
+    `<div class="fs12 text3" style="padding:6px 2px">尚未执行筛选，点击「开始筛选」处理人才库简历</div>`;
+  // 职位选择器
+  const sel = $('#screenPos');
+  sel.innerHTML = '<option value="">全部职位</option>'+DB.positions.filter(p=>p.active).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  // 推荐卡片
+  renderRecoGrid();
+  // 台账速览
+  const led = DB.ledger;
+  const onboard = led.filter(r=>r.onboard==='已入职').length;
+  const waiting = led.filter(r=>r.onboard==='待入职').length;
+  const pass = led.filter(r=>r.progress==='通过').length;
+  $('#wbQuickStats').innerHTML = `
+    <div class="s-item"><span class="s-num" style="color:var(--green-text)">${onboard}</span><span class="s-label">已入职</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--yellow-text)">${waiting}</span><span class="s-label">待入职</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--primary)">${pass}</span><span class="s-label">面试通过</span></div>
+    <div class="s-item"><span class="s-num">${led.length}</span><span class="s-label">台账记录总数</span></div>`;
+  $('#stCandTrend').textContent = 'D级自动归档'+cands.filter(c=>c.level==='D').length+'份';
+}
+
+function renderRecoGrid(){
+  const ab = DB.candidates.filter(c=>['A','B'].includes(c.level) && c.status==='new');
+  const g = $('#recoGrid');
+  if(!ab.length){ g.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="e-ico">⭐</div><p>暂无待确认的 A/B 级候选人</p><p class="fs12">执行简历筛选后，A/B级候选人将推荐到这里</p></div>'; return; }
+  g.innerHTML = ab.map(c=>{
+    const stBadge = c.status==='new' ? '' : (c.status==='fit'?'<span class="badge badge-green">合适</span>':c.status==='pending'?'<span class="badge badge-yellow">待定</span>':'<span class="badge badge-red">不合适</span>');
+    return `<div class="reco-card" onclick="openResume('${c.id}')">
+      <div class="reco-top">
+        <div class="reco-name">${esc(c.name)}<span class="fs12 text3" style="font-weight:400;margin-left:6px">${c.age?c.age+'岁':''}</span></div>
+        <span class="lev-${c.level}">${c.level}级</span>
+      </div>
+      <div class="flex gap8 flex-wrap">
+        <span class="reco-tag">🎯 ${esc(c.pos)}</span>
+        <span class="reco-tag">📊 ${c.score}分</span>
+        ${stBadge}
+      </div>
+      <div class="reco-reason">💡 ${esc(c.extra||'综合评分达到推荐线')}</div>
+      <div class="flex gap4 mt8" onclick="event.stopPropagation()">
+        <button class="btn btn-green btn-sm" style="flex:1" onclick="judgeCandQuick('${c.id}','fit')">合适</button>
+        <button class="btn btn-yellow btn-sm" style="flex:1" onclick="judgeCandQuick('${c.id}','pending')">待定</button>
+        <button class="btn btn-red btn-sm" style="flex:1" onclick="judgeCandQuick('${c.id}','unfit')">不合适</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function judgeCandQuick(id,st){
+  const c = DB.candidates.find(x=>x.id===id);
+  if(!c) return;
+  c.status = st;
+  saveDB(); renderRecoGrid(); renderWorkbench(); renderTalent();
+  toast(st==='fit'?'已标记为合适':st==='pending'?'已标记为待定':'已标记为不合适','success');
+}
+
+/* ================================================================
+ * 人才库
+ * ================================================================ */
+let talentPage = 1;
+function renderTalent(){
+  const q = ($('#talentSearch')?.value||'').trim().toLowerCase();
+  const pFilter = $('#talentPosFilter')?.value||'';
+  const sFilter = $('#talentStatusFilter')?.value||'';
+  const lFilter = $('#talentLevelFilter')?.value||'';
+  const sub = DB._talentFilter||'';
+  let list = DB.candidates.slice();
+  if(sub==='fit') list = list.filter(c=>c.status==='fit');
+  else if(sub==='unfit') list = list.filter(c=>c.status==='unfit');
+  else if(sub==='pending') list = list.filter(c=>c.status==='pending');
+  if(q) list = list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.pos||'').toLowerCase().includes(q)||(c.emailTitle||'').toLowerCase().includes(q));
+  if(pFilter) list = list.filter(c=>c.pos===pFilter);
+  if(sFilter) list = list.filter(c=>c.status===sFilter);
+  if(lFilter) list = list.filter(c=>c.level===lFilter);
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total/PAGE_SIZE));
+  if(talentPage>pages) talentPage = pages;
+  const start = (talentPage-1)*PAGE_SIZE;
+  const pageList = list.slice(start, start+PAGE_SIZE);
+  const container = $('#talentList');
+  if(!pageList.length){
+    container.innerHTML = '<div class="empty"><div class="e-ico">📭</div><p>没有符合条件的简历</p></div>';
+    $('#talentPager').innerHTML = '';
+  }else{
+    container.innerHTML = pageList.map(c=>{
+      const stBadge = c.status==='new' ? '<span class="badge badge-gray">未判断</span>' :
+        c.status==='fit'?'<span class="badge badge-green">合适</span>':c.status==='pending'?'<span class="badge badge-yellow">待定</span>':'<span class="badge badge-red">不合适</span>';
+      const level = c.level ? `<span class="lev-${c.level}">${c.level}级</span>` : '';
+      return `<div class="cand-row" data-id="${c.id}" onclick="openResume('${c.id}')">
+        <input type="checkbox" class="ck" onclick="event.stopPropagation();toggleSel('${c.id}',this)" data-cid="${c.id}">
+        <div class="cand-name">${esc(c.name)}${c.age?`<small>${c.age}岁</small>`:''}</div>
+        <div class="flex-1">
+          <div class="cand-mail">${esc(c.emailTitle)}</div>
+        </div>
+        <div class="cand-pos">🎯 ${esc(c.pos)}</div>
+        <div class="cand-score">${c.score?c.score+'分':''}</div>
+        ${level}
+        ${stBadge}
+        <div class="cand-op">
+          <span class="badge badge-gray" style="font-size:11px">${esc(c.source||'')}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  // 分页
+  let pg = '<button '+(talentPage<=1?'disabled':'')+' onclick="talentPage--;renderTalent()">‹</button>';
+  for(let i=1;i<=pages;i++){
+    pg += `<button class="${i===talentPage?'on':''}" onclick="talentPage=${i};renderTalent()">${i}</button>`;
+  }
+  pg += `<button ${talentPage>=pages?'disabled':''} onclick="talentPage++;renderTalent()">›</button>`;
+  $('#talentPager').innerHTML = pg;
+  updateSelBar();
+  $('#talentSub').textContent = '共 '+total+' 份简历 · 每页 '+PAGE_SIZE+' 份';
+}
+const selSet = new Set();
+function toggleSel(id,el){
+  if(el.checked) selSet.add(id); else selSet.delete(id);
+  updateSelBar();
+}
+function toggleAll(){
+  const ck = $('#ckAll');
+  $$('#talentList .cand-row input[type=checkbox]').forEach(c=>{
+    c.checked = ck.checked;
+    const cid = c.dataset.cid;
+    if(ck.checked) selSet.add(cid); else selSet.delete(cid);
+  });
+  updateSelBar();
+}
+function updateSelBar(){
+  const n = selSet.size;
+  $('#batchDelBtn').style.display = n?'inline-flex':'none';
+  $('#batchBar').style.display = n?'flex':'none';
+  $('#selCount').textContent = n;
+  $('#ckAll').checked = false;
+}
+function batchDeleteTalent(){
+  if(!selSet.size) return;
+  confirmBox('批量删除','确定删除选中的 '+selSet.size+' 份简历吗？删除后可在导出备份中恢复。','删除',()=>{
+    DB.candidates = DB.candidates.filter(c=>!selSet.has(c.id));
+    selSet.clear(); saveDB(); renderTalent(); renderWorkbench();
+    toast('已删除 '+selSet.size+' 份简历','success');
+  },true);
+}
+
+/* ---------- 简历预览 ---------- */
+let currentCand = null;
+function openResume(id){
+  const c = DB.candidates.find(x=>x.id===id);
+  if(!c) return;
+  currentCand = c;
+  const stBadge = c.status==='fit'?'合适':c.status==='pending'?'待定':c.status==='unfit'?'不合适':'未判断';
+  $('#resumeTitle').innerHTML = `${esc(c.name)}${c.age?`（${c.age}岁）`:''} · ${esc(c.pos)} <span class="badge ${c.status==='fit'?'badge-green':c.status==='pending'?'badge-yellow':c.status==='unfit'?'badge-red':'badge-gray'}" style="margin-left:8px">${stBadge}</span>`;
+  const workLines = (c.work||'').split('\n').filter(Boolean);
+  $('#resumeBody').innerHTML = `
+    <div class="flex gap8 flex-wrap mb12">
+      <span class="badge badge-purple">📧 ${esc(c.emailTitle)}</span>
+      <span class="badge badge-gray">来源：${esc(c.source)}</span>
+      ${c.score?`<span class="badge badge-blue">AI评分：${c.score}分 / ${c.level}级</span>`:''}
+    </div>
+    <div class="resume-body">
+      <h4>工作经历</h4>
+      ${workLines.map(l=>`<p>${esc(l)}</p>`).join('')||'<p class="text3">暂无工作经历信息</p>'}
+      <h4>AI 分析</h4>
+      <p>${esc(c.extra||'暂无')}</p>
+      ${c.reason?`<p>✅ 推荐理由：${esc(c.reason)}</p>`:''}
+      ${c.failReason?`<p style="color:var(--red-text)">⛔ 不通过原因：${esc(c.failReason)}</p>`:''}
+    </div>`;
+  showModal('resumeMask');
+}
+function judgeCand(st){
+  if(!currentCand) return;
+  const c = currentCand;
+  c.status = st;
+  saveDB();
+  closeModal('resumeMask');
+  renderTalent(); renderWorkbench(); renderRecoGrid();
+  toast(st==='fit'?'已标记为「合适」':st==='pending'?'已标记为「待定」':'已标记为「不合适」','success');
+}
+
+/* ---------- 邮箱 ---------- */
+function openMailModal(){
+  $('#mailAddr').value = DB.email.addr||'';
+  $('#mailPwd').value = '';
+  renderMailState();
+  $$('#autoSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===String(DB.email.auto)));
+  showModal('mailMask');
+}
+function renderMailState(){
+  if(DB.email.bound){
+    $('#mailStatusLine').innerHTML = '<span class="dot dot-green"></span><span style="color:var(--green-text)">已绑定 '+esc(DB.email.addr)+'（授权码已加密保存）</span>';
+  }else{
+    $('#mailStatusLine').innerHTML = '<span class="dot dot-gray"></span><span>未绑定邮箱</span>';
+  }
+}
+function setAuto(v){ DB.email.auto = v; $$('#autoSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===String(v))); }
+function saveMail(){
+  const addr = $('#mailAddr').value.trim();
+  const pwd = $('#mailPwd').value;
+  if(!addr){ toast('请输入邮箱地址','warn'); return; }
+  if(!DB.email.bound && !pwd){ toast('首次绑定需要填写安全码/授权码','warn'); return; }
+  DB.email.addr = addr;
+  DB.email.bound = true;
+  if(pwd) DB.email.pwd = btoa('hr_'+pwd); // 非明文存储（演示用简单编码，实际桌面应用使用系统加密）
+  saveDB(); renderMailState(); renderWorkbench(); closeModal('mailMask');
+  toast('邮箱绑定成功，绿色状态灯已点亮','success');
+}
+function receiveMail(){
+  if(!DB.email.bound){ toast('请先绑定邮箱','warn'); openMailModal(); return; }
+  showLoading();
+  setTimeout(()=>{
+    // 模拟增量收取：生成 1-3 份新简历
+    const n = 1 + Math.floor(Math.random()*3);
+    const names = [['钱进','转化'],['何军','开发'],['罗琳','SMB销售经理'],['孟强','销售顾问'],['高远','行业顾问'],['杜娟','售后'],['许峰','开发'],['秦悦','转化']];
+    for(let i=0;i<n;i++){
+      const pick = names[Math.floor(Math.random()*names.length)];
+      const age = 24+Math.floor(Math.random()*9);
+      const pos = pick[1];
+      DB.candidates.unshift({
+        id:uid(), name:pick[0], age, pos,
+        emailTitle:`【BOSS直聘】${pick[0]}-${pos}-简历`,
+        source:'BOSS直聘', score:null, level:null, status:'new',
+        work:'（新收取简历，待AI筛选解析）', reason:'',failReason:'',extra:'新收取', createdAt:Date.now()
+      });
+    }
+    saveDB(); renderWorkbench(); renderTalent();
+    hideLoading();
+    toast('增量收取完成，新增 '+n+' 份简历','success');
+  }, 900);
+}
+
+/* ---------- 上传 ---------- */
+let uploadFiles = [];
+function openUploadModal(){
+  uploadFiles = [];
+  $('#uploadFiles').value = '';
+  $('#uploadPos').innerHTML = '<option value="">自动识别</option>'+DB.positions.filter(p=>p.active).map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  showModal('uploadMask');
+}
+function handleUpload(input){
+  uploadFiles = Array.from(input.files||[]);
+}
+function doUpload(){
+  if(!uploadFiles.length){ toast('请先选择简历文件','warn'); return; }
+  const pos = $('#uploadPos').value;
+  uploadFiles.forEach(f=>{
+    const name = f.name.replace(/\.[^.]+$/,'');
+    DB.candidates.unshift({
+      id:uid(), name, age:null, pos:pos||'待分类',
+      emailTitle:'手动上传：'+f.name, source:'手动上传', score:null, level:null, status:'new',
+      work:'（手动上传简历，文件名：'+f.name+'）', reason:'',failReason:'',extra:'手动上传', createdAt:Date.now()
+    });
+  });
+  saveDB(); closeModal('uploadMask'); renderTalent(); renderWorkbench();
+  toast('成功上传 '+uploadFiles.length+' 份简历','success');
+}
+function exportTalent(){
+  const data = DB.candidates.map(c=>({姓名:c.name,年龄:c.age||'',职位:c.pos||'',邮件标题:c.emailTitle||'',来源:c.source||'',评分:c.score||'',等级:c.level||'',状态:c.status||'',工作经历:c.work||'',推荐理由:c.reason||'',不通过原因:c.failReason||''}));
+  exportCSV('人才库导出_'+today()+'.csv', data);
+  toast('人才库已导出为 CSV（可用 Excel 打开）','success');
+}
+
+/* ================================================================
+ * 简历筛选（三刀 + 四维）
+ * ================================================================ */
+function screenTab(t){
+  $$('#page-screen .btn[data-tab]').forEach(b=>b.classList.toggle('btn-soft', b.dataset.tab===t));
+  $$('#page-screen .btn[data-tab]').forEach(b=>b.classList.toggle('btn-ghost', b.dataset.tab!==t));
+  $('#screenTab-rules').style.display = t==='rules'?'block':'none';
+  $('#screenTab-results').style.display = t==='results'?'block':'none';
+}
+function getKnifeTags(k){
+  const def = {knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']};
+  return (DB['_knifeDef']&&DB['_knifeDef'][k])||def[k];
+}
+function renderKnives(){
+  const K = DB.knives;
+  const names = {knife1:'第一刀',knife2:'第二刀',knife3:'第三刀'};
+  const desc = {knife1:'ToC行业排除：命中任一关键词即排除',knife2:'非销售经历排除：经历全部为以下方向时排除',knife3:'量化实锤：简历需包含可验证的业绩信息'};
+  $('#knifeCards').innerHTML = ['knife1','knife2','knife3'].map(k=>`
+    <div class="knife-card">
+      <div class="knife-head">
+        <div class="knife-title"><span class="knife-badge">${names[k]}</span> <input class="input" style="width:200px;padding:5px 10px" value="${esc(K[k])}" onchange="DB.knives['${k}']=this.value;saveDB()" title="点击修改维度名称"></div>
+        <span class="fs12 text3">${desc[k]}</span>
+      </div>
+      <div class="tag-list" id="tags-${k}">
+        ${getKnifeTags(k).map(t=>`<span class="tag">${esc(t)}<span class="x" onclick="delKnifeTag('${k}','${esc(t)}')">×</span></span>`).join('')}
+        <button class="tag-add" onclick="addKnifeTag('${k}')">＋ 添加关键词</button>
+      </div>
+    </div>`).join('');
+}
+function delKnifeTag(k,t){
+  const def = getKnifeTags(k).filter(x=>x!==t);
+  DB['_knifeDef'] = DB['_knifeDef']||{}; DB['_knifeDef'][k]=def; saveDB(); renderKnives();
+}
+function addKnifeTag(k){
+  const v = prompt('输入要添加的关键词：');
+  if(!v || !v.trim()) return;
+  const def = getKnifeTags(k);
+  def.push(v.trim());
+  DB['_knifeDef'] = DB['_knifeDef']||{}; DB['_knifeDef'][k]=def; saveDB(); renderKnives();
+}
+function renderDims(){
+  const rows = $('#dimRows');
+  rows.innerHTML = DB.dims.map((d,i)=>`
+    <div class="dim-row">
+      <div class="dim-name" title="右键点击编辑维度名称" oncontextmenu="event.preventDefault();editDimName(${i})" onclick="editDimName(${i})">${esc(d.name)}</div>
+      <div class="dim-slider"><input type="range" min="0" max="100" value="${d.weight}" oninput="setDimW(${i},this.value)"></div>
+      <div class="dim-w" id="dimW${i}">${d.weight}%</div>
+    </div>`).join('');
+  const total = DB.dims.reduce((s,d)=>s+d.weight,0);
+  $('#dimTotal').innerHTML = '权重合计：<b style="color:'+(total===100?'var(--green-text)':'var(--red-text)')+'">'+total+'%</b>'+(total===100?'（已归一）':'（点击任意滑块自动归一）');
+}
+function setDimW(i,v){
+  DB.dims[i].weight = Number(v);
+  // 自动归一
+  const total = DB.dims.reduce((s,d)=>s+d.weight,0);
+  if(total!==100){
+    const diff = 100-total;
+    // 将差值加到第一个权重>0的维度
+    const others = DB.dims.map((d,idx)=>({d,idx})).filter(x=>x.idx!==i && x.d.weight>0);
+    let left = diff;
+    for(const o of others){
+      const add = Math.round(left/(others.length||1));
+      o.d.weight = Math.max(0, o.d.weight+add);
+      left -= add;
+    }
+    if(left!==0) DB.dims[i].weight = Math.max(0, DB.dims[i].weight+left);
+  }
+  saveDB(); renderDims();
+}
+function editDimName(i){
+  const v = prompt('修改维度名称：', DB.dims[i].name);
+  if(v && v.trim()){ DB.dims[i].name = v.trim(); saveDB(); renderDims(); }
+}
+function toggleSwitch(el,key){
+  el.classList.toggle('on');
+  DB.sw[key] = el.classList.contains('on');
+  saveDB();
+  if(key==='timer'){ $('#timerStateText').textContent = DB.sw.timer?'已开启':'已关闭'; }
+}
+
+/* ---------- 评分引擎 ---------- */
+function scoreCandidate(c){
+  const posDef = DB.positions.find(p=>p.name===c.pos);
+  const result = {knifeResult:'通过', knifeReason:'', dims:[], score:0, level:'C', reason:'', failReason:''};
+  const work = c.work||'';
+  const extra = c.extra||'';
+  const allText = work + ' ' + extra + ' ' + (c.emailTitle||'');
+  // ===== 三刀 =====
+  if(DB.sw.knife!==false){
+    // 第一刀 ToC
+    const t1 = getKnifeTags('knife1');
+    const hit1 = t1.filter(t=>t && allText.includes(t));
+    if(hit1.length){ result.knifeResult='不过'; result.failReason = '第一刀（ToC行业排除）：简历命中「'+hit1.join('、')+'」，属于ToC行业，不符合ToB方向'; }
+    // 第二刀 非销售（只看真实工作经历）
+    if(result.knifeResult==='通过'){
+      const nonSalesWords = ['交付','运营','售前','项目管理','售后','客服','行政','HR'];
+      const nonSalesHits = nonSalesWords.filter(w=>work.includes(w));
+      // 销售信号：真实销售/客户开发/业绩词汇（排除"客户投诉"等泛客户词）
+      const salesSignal = /销售|转化|签约|回款|业绩|成交|开拓|渠道|拜访|大客户|客户经理|销售主管|销售经理|客户资源|线索|外呼|陌拜/.test(work);
+      // 真实管理证据（管理具体人数/搭建团队/带领团队等，排除"团队管理"等泛表述）
+      const mgrEvidence = /管理\d+人|带领团队|带领\d+人|搭建团队|组建团队|负责招聘培训|制定团队目标|团队目标|招聘培训/.test(work);
+      // 技术/职能类岗位信号（开发、产品、设计等岗位不应被销售刀误伤）
+      const techSignal = /开发|研发|工程师|技术|产品|设计|测试|算法|架构/.test(work);
+      if(nonSalesHits.length>0 && !salesSignal && !mgrEvidence && !techSignal){
+        result.knifeResult='不过'; result.failReason = '第二刀（非销售经历排除）：工作经历全部属于「'+nonSalesHits.join('、')+'」方向，且无销售/客户开发经验（管理经验必须来自真实工作经历，不能依据期望岗位判断）';
+      }
+    }
+    // 第三刀 量化
+    if(result.knifeResult==='通过'){
+      const t3 = getKnifeTags('knife3');
+      const hit3 = t3.filter(t=>t && allText.includes(t));
+      if(!hit3.length){
+        // 无量化 → 不算淘汰但扣分提示
+        result.knifeReason = '第三刀（量化实锤）：未发现「%、达成率、业绩、回款额」等可验证业绩数据，评分扣减';
+      }else{
+        result.knifeReason = '第三刀（量化实锤）：命中「'+hit3.join('、')+'」等可验证业绩信息 ✓';
+      }
+    }
+  }
+  // ===== 四维评分 =====
+  const dims = DB.dims.length?DB.dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}];
+  const dimScores = [];
+  const toBWords = ['企业级','ToB','大客户','中小企业','企业客户','B端','客户开拓','解决方案','SaaS','b2b','线索','企业','客户'];
+  const aiWords = ['AI','人工智能','智能','大模型','数字化','数据','算法','机器学习','自动化','效率提升','机器人','模型'];
+  const indWords = ['行业','深耕','领域','客户资源','垂直','赛道','场景'];
+  const kaiWords = ['开拓','新客户','开发客户','拓展','增长','渠道','新市场','拜访'];
+  const mgrWords = [/管理\d+人/,/带领团队/,/搭建团队/,/组建团队/,/负责招聘培训/,/制定团队目标/,/销售主管/,/销售经理/,/管理若干人/,/管理团队/,/团队管理/,/带团队/,/招聘培训/,/团队目标/];
+  let totalScore = 0;
+  const bonus = {mgr:0, quant:0};
+  const hasMgrBonus = mgrWords.some(w=>w.test(work));
+  const hasQuant = (getKnifeTags('knife3')||[]).some(w=>w && allText.includes(w));
+  for(const d of dims){
+    let hits = [], neutral = 3;
+    if(d.name.includes('ToB')||d.name==='ToB经验'){
+      hits = toBWords.filter(w=>work.toLowerCase().includes(w.toLowerCase()));
+      neutral = 2;
+    }else if(d.name.includes('AI')||d.name==='AI能力'){
+      hits = aiWords.filter(w=>work.toLowerCase().includes(w.toLowerCase()));
+      neutral = 2;
+    }else if(d.name.includes('行业')||d.name==='行业匹配'){
+      hits = indWords.filter(w=>work.includes(w));
+      neutral = 3;
+    }else if(d.name.includes('开拓')||d.name==='开拓经验'){
+      hits = kaiWords.filter(w=>work.includes(w));
+      neutral = 3;
+    }else{
+      hits = [];
+      neutral = 5;
+    }
+    // 命中词越多分越高，起步4分，最高10分
+    const s = hits.length ? Math.min(10, Math.round((4 + hits.length*1.5)*10)/10) : neutral;
+    const contrib = s * (d.weight/100);
+    totalScore += contrib;
+    const evidence = hits.slice(0,5).map(w=>'命中关键词「'+w+'」');
+    if(!evidence.length) evidence.push((d.name.includes('ToB')||d.name==='ToB经验')?'未见明显ToB/客户经验描述':'该维度描述较少');
+    dimScores.push({name:d.name, score:s, weight:d.weight, contrib:Math.round(contrib*10)/10, evidence});
+  }
+  // 管理经验加成（真实工作经历证据）
+  if(hasMgrBonus){
+    bonus.mgr = 2;
+    totalScore += 2;
+  }
+  // 量化业绩加成
+  if(hasQuant && result.knifeResult==='通过'){
+    bonus.quant = 0.5;
+    totalScore += 0.5;
+  }
+  // 无量化扣分（仅在确实未发现量化证据时）
+  if(result.knifeResult==='通过' && result.knifeReason && result.knifeReason.indexOf('未发现')>=0){
+    totalScore = Math.max(0, totalScore-0.5);
+  }
+  result.score = Math.round(Math.min(10, totalScore)*10)/10;
+  result.dims = dimScores;
+  // 等级判定
+  if(result.knifeResult==='不过'){ result.level='D'; }
+  else if(result.score>=7){ result.level='A'; }
+  else if(result.score>=4.5){ result.level='B'; }
+  else { result.level='C'; }
+  // 推荐理由/不通过原因
+  if(result.knifeResult==='不过'){
+    result.reason = '';
+  }else{
+    const dimsName = dimScores.map(d=>`${d.name}${d.score}分`).join('、');
+    let b = '';
+    if(bonus.mgr) b += '＋真实管理经验'+bonus.mgr+'分';
+    if(bonus.quant) b += '＋量化业绩'+bonus.quant+'分';
+    result.reason = `四维评分（${dimsName}）加权合计${Math.round((result.score-(bonus.mgr+bonus.quant))*10)/10}分${b}，最终${result.score}分，综合${result.level}级。${result.knifeReason?result.knifeReason:''}`;
+  }
+  return result;
+}
+
+/* ---------- 执行筛选 ---------- */
+let screeningRun = false;
+function runScreening(){
+  if(screeningRun){ toast('筛选正在进行中…','warn'); return; }
+  // 读取当前可见区域的筛选设置（主工作台或简历筛选页）
+  const scopeEl = $('#page-screen').classList.contains('active') ? $('#screenScope2') : $('#screenScope');
+  const posEl = $('#page-screen').classList.contains('active') ? $('#screenPos2') : $('#screenPos');
+  const scope = (scopeEl?scopeEl.value:'local') || 'local';
+  if(scope==='boss'){ toast('BOSS 辅助筛选需要浏览器页面操作，请在本地人才库模式下筛选','warn'); return; }
+  const posSel = posEl?posEl.value:'';
+  const posName = posSel ? (DB.positions.find(p=>p.id===posSel)||{}).name : '';
+  // 只筛选「未判断」的简历；指定职位时只筛该职位
+  let cands = DB.candidates.filter(c=>c.status==='new');
+  if(posName) cands = cands.filter(c=>c.pos===posName);
+  if(!cands.length){ toast('没有待筛选的简历','warn'); return; }
+  screeningRun = true;
+  showLoading();
+  $('#screenProgressWrap').style.display='block';
+  let done = 0;
+  const total = cands.length;
+  const screenResults = [];
+  const step = Math.max(1, Math.ceil(total/12));
+  const iv = setInterval(()=>{
+    const batch = cands.slice(done, done+step);
+    batch.forEach(c=>{
+      const r = scoreCandidate(c);
+      c.score = r.score; c.level = r.level; c.reason = r.reason; c.failReason = r.failReason;
+      // A/B → 推荐待确认（new）；D → 自动归档不合适；C → 入库（new）
+      if(r.level==='D' && DB.sw.auto!==false){ c.status='unfit'; }
+      else if(r.level==='A'||r.level==='B'){ c.status='new'; }
+      else if(r.level==='C'){ c.status='new'; }
+      screenResults.push({c, r});
+      // 评分历史（最多保留500条）
+      DB.history.unshift({
+        time:new Date().toLocaleString('zh-CN',{hour12:false}),
+        name:c.name, pos:c.pos, source:c.source, gate:r.knifeResult, score:r.score, level:r.level,
+        dims:r.dims, reason:r.reason, failReason:r.failReason, verdict:c.status
+      });
+      if(DB.history.length>500) DB.history.length = 500;
+    });
+    done += batch.length;
+    const pct = Math.round(done/total*100);
+    $('#pgAll').style.width = pct+'%';
+    $('#pgAllN').textContent = pct+'%';
+    // 每个职位进度
+    renderPerPos();
+    if(done>=total){
+      clearInterval(iv);
+      const dCount = screenResults.filter(x=>x.r.level==='D').length;
+      DB.lastScreen = {total, done, dCount, time:new Date().toLocaleString('zh-CN',{hour12:false})};
+      DB._lastScreenResults = screenResults.map(x=>({id:x.c.id,name:x.c.name,pos:x.c.pos,score:x.r.score,level:x.r.level,reason:x.r.reason,failReason:x.r.failReason,status:x.c.status,knife:x.r.knifeResult}));
+      saveDB(); hideLoading(); screeningRun=false;
+      $('#screenProgressWrap').style.display='none';
+      renderWorkbench(); renderTalent();
+      screenTab('results'); renderScreenResults();
+      toast(`本次筛选 ${total} 份简历，${dCount} 份归档到不合适库。`,'success');
+    }
+  }, 150);
+}
+function renderPerPos(){
+  const posSel = $('#screenPos')?.value||'';
+  const wrap = $('#perPosProgress');
+  if(posSel){ wrap.innerHTML=''; return; }
+  const posNames = DB.positions.filter(p=>p.active).map(p=>p.name);
+  const html = posNames.map(pn=>{
+    const list = DB.candidates.filter(c=>c.pos===pn && (c.status==='new'||c.level));
+    if(!list.length) return '';
+    const d = list.filter(c=>c.level==='D').length;
+    const pct = Math.round(d/list.length*100);
+    return `<div class="progress-bar"><span class="p-label">${esc(pn)}</span><div class="progress"><i style="width:${pct}%"></i></div><span class="p-num">${d}/${list.length}</span></div>`;
+  }).join('');
+  wrap.innerHTML = html||'';
+}
+function renderScreenResults(){
+  const res = DB._lastScreenResults||[];
+  const dCount = res.filter(r=>r.level==='D').length;
+  const aCount = res.filter(r=>r.level==='A').length;
+  const bCount = res.filter(r=>r.level==='B').length;
+  $('#screenResultStat').innerHTML = `
+    <div class="s-item"><span class="s-num">${res.length}</span><span class="s-label">本次筛选</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--primary)">${aCount}</span><span class="s-label">A级推荐</span></div>
+    <div class="s-item"><span class="s-num" style="color:#8C6EF0">${bCount}</span><span class="s-label">B级推荐</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--red-text)">${dCount}</span><span class="s-label">归档不合适库</span></div>`;
+  if(!res.length){ $('#screenResultList').innerHTML = '<div class="empty"><div class="e-ico">🔍</div><p>暂无筛选结果，先执行一次筛选</p></div>'; return; }
+  $('#screenResultList').innerHTML = res.map(r=>{
+    const st = r.status==='unfit'?'<span class="badge badge-red">不合适库</span>':r.level==='A'||r.level==='B'?'<span class="badge badge-green">待确认</span>':'<span class="badge badge-gray">入库</span>';
+    return `<div class="his-card">
+      <div class="his-head">
+        <div class="flex gap8"><b class="fs16">${esc(r.name)}</b><span class="lev-${r.level}">${r.level}级</span>${st}</div>
+        <span class="fs12 text3">🎯 ${esc(r.pos)} · ${r.score}分</span>
+      </div>
+      ${r.reason?`<div class="fs12 text2">✅ ${esc(r.reason)}</div>`:''}
+      ${r.failReason?`<div class="fs12" style="color:var(--red-text)">⛔ ${esc(r.failReason)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* ================================================================
+ * 招聘记录台账
+ * ================================================================ */
+const PROGRESS_OPTS = ['一面不通过','二面不通过','放弃复试','待定','待复试','待背调','待谈薪','通过'];
+const PROGRESS_COLOR = p => {
+  if(['一面不通过','二面不通过','放弃复试'].includes(p)) return 'badge-red';
+  if(['待定','待复试','待背调','待谈薪'].includes(p)) return 'badge-yellow';
+  if(p==='通过') return 'badge-green';
+  return 'badge-gray';
+};
+const ONBOARD_OPTS = ['已入职','待入职','放弃入职'];
+const OFFER_OPTS = ['','接受','拒绝','待发'];
+function renderLedger(){
+  // 筛选
+  const df = $('#ledgerDateFrom').value, dt = $('#ledgerDateTo').value;
+  const pF = $('#ledgerPosFilter').value, gF = $('#ledgerProgressFilter').value;
+  let list = DB.ledger.slice();
+  if(df) list = list.filter(r=>r.date>=df);
+  if(dt) list = list.filter(r=>r.date<=dt);
+  if(pF) list = list.filter(r=>r.pos===pF);
+  if(gF) list = list.filter(r=>r.progress===gF);
+  list.sort((a,b)=>{ const r = DB.ledgerSort==='desc'?-1:1; return (a.date<b.date?-1:1)*r; });
+  // 表头筛选选项
+  const pf = $('#ledgerPosFilter');
+  pf.innerHTML = '<option value="">全部职位</option>'+DB.positions.map(p=>`<option value="${esc(p.name)}" ${p.name===pF?'selected':''}>${esc(p.name)}</option>`).join('');
+  const gf = $('#ledgerProgressFilter');
+  gf.innerHTML = '<option value="">全部面试进度</option>'+PROGRESS_OPTS.map(p=>`<option ${p===gF?'selected':''}>${p}</option>`).join('');
+  // 统计
+  const stats = calcLedgerStats(DB.ledger);
+  $('#ledgerStat').innerHTML = `
+    <div class="s-item"><span class="s-num">${DB.ledger.length}</span><span class="s-label">总记录</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--blue)">${stats.interview}</span><span class="s-label">已到面</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--green-text)">${stats.pass}</span><span class="s-label">面试通过</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--primary)">${stats.offerAccept}</span><span class="s-label">接受Offer</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--green-text)">${stats.onboard}</span><span class="s-label">已入职</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--yellow-text)">${stats.onboardWait}</span><span class="s-label">待入职</span></div>`;
+  // 交替日期分组
+  const dateOrder = [...new Set(list.map(r=>r.date))];
+  const dateAlt = {};
+  dateOrder.forEach((d,i)=>{ dateAlt[d] = i%2===1; });
+  $('#ledgerBody').innerHTML = list.map(r=>{
+    const nameCls = r.onboard==='已入职' ? 'td-name-onboard' : r.onboard==='待入职' ? 'td-name-wait' : '';
+    return `<tr class="${dateAlt[r.date]?'row-alt-date':''}" data-id="${r.id}">
+      <td><input type="checkbox" class="ck" data-lid="${r.id}"></td>
+      <td><input type="date" class="input" style="width:130px;padding:5px 8px" value="${r.date||''}" onchange="setLedger('${r.id}','date',this.value)"></td>
+      <td class="left"><input class="input ${nameCls}" style="width:90px;padding:5px 8px" value="${esc(r.name)}" placeholder="姓名" onchange="setLedger('${r.id}','name',this.value)"></td>
+      <td><input class="input" style="width:110px;padding:5px 8px" value="${esc(r.phone)}" placeholder="电话" onchange="setLedger('${r.id}','phone',this.value)"></td>
+      <td><select class="input" style="width:110px;padding:5px 8px" onchange="setLedger('${r.id}','pos',this.value)">
+        ${['',...DB.positions.map(p=>p.name)].map(o=>`<option value="${esc(o)}" ${r.pos===o?'selected':''}>${esc(o)||'（未选）'}</option>`).join('')}
+        <option value="__NEW__">＋ 新增职位…</option>
+      </select></td>
+      <td><input class="input" style="width:90px;padding:5px 8px" list="cityList" value="${esc(r.city)}" placeholder="城市" onchange="setLedger('${r.id}','city',this.value)"></td>
+      <td><input class="input" style="width:100px;padding:5px 8px" list="ivList" value="${esc(r.interviewer)}" placeholder="面试官" onchange="setLedger('${r.id}','interviewer',this.value)"></td>
+      <td><select class="input" style="width:110px;padding:5px 8px" onchange="setLedger('${r.id}','progress',this.value)">
+        <option value="">（未填写）</option>
+        ${PROGRESS_OPTS.map(o=>`<option ${r.progress===o?'selected':''}>${o}</option>`).join('')}
+      </select></td>
+      <td><select class="input" style="width:100px;padding:5px 8px" onchange="setLedger('${r.id}','onboard',this.value)">
+        <option value="">（未填写）</option>
+        ${ONBOARD_OPTS.map(o=>`<option ${r.onboard===o?'selected':''}>${o}</option>`).join('')}
+      </select></td>
+      <td><select class="input" style="width:100px;padding:5px 8px" onchange="setLedger('${r.id}','offer',this.value)">
+        ${OFFER_OPTS.map(o=>`<option value="${o}" ${r.offer===o?'selected':''}>${o===''?'（未填写）':o}</option>`).join('')}
+      </select></td>
+      <td class="left"><input class="input" style="width:130px;padding:5px 8px" value="${esc(r.remark)}" placeholder="备注" onchange="setLedger('${r.id}','remark',this.value)"></td>
+      <td><span class="del-cell-btn" title="删除该行" onclick="delLedgerRow('${r.id}')">−</span></td>
+    </tr>`;
+  }).join('');
+  // 底部：新增行 + 批量删除
+  $('#ledgerBottomBar').innerHTML = `
+    <div class="flex gap8" style="margin-top:6px">
+      <button class="btn btn-soft btn-sm" onclick="addLedgerRow()">＋ 新增一行</button>
+      <button class="btn btn-ghost btn-sm" onclick="checkAllLedger()">全选/取消</button>
+      <button class="btn btn-red btn-sm" onclick="batchDelLedger()">批量删除选中</button>
+      <span class="fs12 text3">姓名未输入完成时不会自动跳行；表头悬停显示筛选箭头</span>
+    </div>`;
+  // 历史记忆 datalist
+  ensureDatalist();
+}
+function ensureDatalist(){
+  if($('#cityList')) return;
+  const cities = [...new Set(DB.ledger.map(r=>r.city).filter(Boolean))];
+  const ivs = [...new Set(DB.ledger.map(r=>r.interviewer).filter(Boolean))];
+  const html = `<datalist id="cityList">${cities.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <datalist id="ivList">${ivs.map(i=>`<option value="${esc(i)}">`).join('')}</datalist>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function setLedger(id,key,val){
+  const r = DB.ledger.find(x=>x.id===id);
+  if(!r) return;
+  // 新增职位同步职位库
+  if(key==='pos' && val==='__NEW__'){
+    const v = prompt('输入新职位名称（将同步到职位库）：');
+    if(v && v.trim()){
+      DB.positions.push({id:uid(),name:v.trim(),city:'',jd:'',hard:'',screen:'',knives:{knife1:[],knife2:[],knife3:[]},dims:[...DB.dims],boss:'',active:true});
+      r.pos = v.trim();
+      saveDB(); renderLedger(); renderPositions();
+      toast('职位「'+v.trim()+'」已新增并同步到职位库','success');
+    }else{ renderLedger(); return; }
+  }else{
+    r[key] = val;
+  }
+  saveDB(); renderLedger();
+}
+function delLedgerRow(id){
+  confirmBox('删除记录','确定删除这条招聘记录吗？','删除',()=>{
+    DB.ledger = DB.ledger.filter(x=>x.id!==id);
+    saveDB(); renderLedger(); renderWorkbench();
+  },true);
+}
+function addLedgerRow(){
+  DB.ledger.unshift({id:uid(),date:today(),name:'',phone:'',pos:'',city:'',interviewer:'',progress:'',offer:'',onboard:'',remark:''});
+  saveDB(); renderLedger();
+  toast('已新增一行，请在姓名栏输入','success');
+}
+function setLedgerSort(dir){
+  DB.ledgerSort = dir;
+  $('#sortAscBtn').className = 'btn btn-sm '+(dir==='asc'?'btn-soft':'btn-ghost');
+  $('#sortDescBtn').className = 'btn btn-sm '+(dir==='desc'?'btn-soft':'btn-ghost');
+  saveDB(); renderLedger();
+}
+function checkAllLedger(){
+  const cks = $$('#ledgerBody input[data-lid]');
+  const allOn = cks.length && [...cks].every(c=>c.checked);
+  cks.forEach(c=>c.checked=!allOn);
+}
+function batchDelLedger(){
+  const ids = [...$$('#ledgerBody input[data-lid]')].filter(c=>c.checked).map(c=>c.dataset.lid);
+  if(!ids.length){ toast('请先勾选要删除的记录','warn'); return; }
+  confirmBox('批量删除','确定删除选中的 '+ids.length+' 条招聘记录吗？','删除',()=>{
+    DB.ledger = DB.ledger.filter(x=>!ids.includes(x.id));
+    saveDB(); renderLedger(); renderWorkbench();
+    toast('已删除 '+ids.length+' 条记录','success');
+  },true);
+}
+function dedupeLedger(){
+  const before = DB.ledger.length;
+  const seen = new Map();
+  DB.ledger = DB.ledger.filter(r=>{
+    const key = (r.name||'')+(r.phone||'')+(r.date||'');
+    if(!key) return true;
+    if(seen.has(key)) return false;
+    seen.set(key,true); return true;
+  });
+  saveDB(); renderLedger();
+  toast('去重完成：移除 '+(before-DB.ledger.length)+' 条重复记录','success');
+}
+let lastImport = null;
+function importLedger(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.csv,.xlsx,.xls';
+  input.onchange = e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      // CSV 解析（支持 UTF-8 BOM）
+      let text = ev.target.result;
+      if(text.charCodeAt(0)===0xFEFF) text = text.slice(1);
+      const rows = parseCSV(text);
+      if(!rows.length){ toast('文件为空或无法解析','error'); return; }
+      lastImport = {before: DB.ledger.slice()};
+      const headers = rows[0].map(h=>h.trim());
+      const map = {'姓名':'name','电话':'phone','手机':'phone','应聘职位':'pos','职位':'pos','城市':'city','面试官':'interviewer','日期':'date','面试时间':'date','面试进度':'progress','入职进度':'onboard','入职状态':'onboard','Offer':'offer','offer':'offer','备注':'remark','推荐/到面':'progress'};
+      rows.slice(1).forEach(r=>{
+        const rec = {};
+        headers.forEach((h,i)=>{
+          const k = map[h]||h;
+          let v = (r[i]||'').trim();
+          // 无年份日期按2026年
+          if(k==='date' && v && !/^\d{4}-/.test(v)){
+            const m = v.match(/(\d{1,2})[.\/-](\d{1,2})/);
+            if(m) v = '2026-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
+          }
+          // 推荐/到面 → 通过 = 已到面
+          if(h==='推荐/到面' && v==='通过'){ rec.progress = '通过'; }
+          rec[k]=v;
+        });
+        // 到面无后续 → 一面不通过；有初面无后续 → 放弃复试
+        if(!rec.progress && rec.remark && /初面|一面/.test(rec.remark)) rec.progress = '放弃复试';
+        if(rec.onboard==='已入职' && !rec.date) rec.date = today();
+        if(rec.progress==='通过' && !rec.onboard && !rec.offer) rec.offer='拒绝';
+        if(rec.name){
+          DB.ledger.unshift({id:uid(),date:rec.date||'',name:rec.name,phone:rec.phone||'',pos:rec.pos||'',city:rec.city||'',interviewer:rec.interviewer||'',progress:rec.progress||'',offer:rec.offer||'',onboard:rec.onboard||'',remark:rec.remark||''});
+        }
+      });
+      saveDB(); renderLedger(); renderWorkbench();
+      toast('Excel 导入完成：新增 '+(DB.ledger.length-lastImport.before.length)+' 条记录','success');
+    };
+    reader.readAsText(f, 'utf-8');
+  };
+  input.click();
+}
+function undoLedgerImport(){
+  if(!lastImport){ toast('没有可撤销的最近一次导入','warn'); return; }
+  DB.ledger = lastImport.before;
+  lastImport = null;
+  saveDB(); renderLedger();
+  toast('已撤销最近一次导入','success');
+}
+function exportLedger(){
+  const data = DB.ledger.map(r=>({日期:r.date,姓名:r.name,电话:r.phone,应聘职位:r.pos,城市:r.city,面试官:r.interviewer,面试进度:r.progress,Offer:r.offer,入职进度:r.onboard,备注:r.remark}));
+  exportCSV('招聘记录台账_'+today()+'.csv', data);
+  toast('台账已导出，可用 Excel 打开','success');
+}
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=ch;
+    }else{
+      if(ch==='"') inQ=true;
+      else if(ch===','){ row.push(cur); cur=''; }
+      else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      else if(ch==='\r'){}
+      else cur+=ch;
+    }
+  }
+  if(cur||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function exportCSV(name,data){
+  const heads = Object.keys(data[0]||{});
+  const lines = [heads.join(',')];
+  data.forEach(r=>{
+    lines.push(heads.map(h=>{
+      let v = String(r[h]??'');
+      if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"';
+      return v;
+    }).join(','));
+  });
+  const blob = new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},200);
+}
+function calcLedgerStats(list){
+  const interview = list.filter(r=>r.progress && r.progress!=='').length;
+  const pass = list.filter(r=>r.progress==='通过').length;
+  const offerAccept = list.filter(r=>r.offer==='接受').length;
+  const onboard = list.filter(r=>r.onboard==='已入职').length;
+  const onboardWait = list.filter(r=>r.onboard==='待入职').length;
+  return {interview,pass,offerAccept,onboard,onboardWait};
+}
+
+/* ================================================================
+ * 台账页签切换
+ * ================================================================ */
+function ledgerTab(t){
+  $$('#page-ledger .btn[data-ltab]').forEach(b=>{
+    const on = b.dataset.ltab===t;
+    b.classList.toggle('btn-soft', on);
+    b.classList.toggle('btn-ghost', !on);
+  });
+  $('#ledgerTab-table').style.display = t==='table'?'block':'none';
+  $('#ledgerTab-report').style.display = t==='report'?'block':'none';
+  $('#ledgerTab-history').style.display = t==='history'?'block':'none';
+  $('#ledgerHeadBtns').style.display = t==='table'?'flex':'none';
+  if(t==='report') renderReport();
+  if(t==='history') renderHistory();
+}
+function toggleLedgerAll(el){
+  $$('#ledgerBody input[data-lid]').forEach(c=>c.checked = el.checked);
+}
+
+/* ================================================================
+ * 数据报表
+ * ================================================================ */
+function calcRates(list){
+  const total = list.length;
+  const toMian = list.filter(r=>r.progress && r.progress!=='').length;      // 到面人数（有面试进度即到面）
+  const pass = list.filter(r=>r.progress==='通过').length;                   // 面试通过
+  const offerAccept = list.filter(r=>r.offer==='接受').length;               // 接受Offer
+  const onboard = list.filter(r=>r.onboard==='已入职').length;               // 入职
+  const pct = (a,b)=> b>0 ? Math.round(a/b*1000)/10 : 0;
+  return {
+    total, toMian, pass, offerAccept, onboard,
+    toMianRate:pct(toMian,total), passRate:pct(pass,toMian),
+    offerRate:pct(offerAccept,pass), onboardRate:pct(onboard,pass)
+  };
+}
+function renderReport(){
+  const df = $('#reportDateFrom').value, dt = $('#reportDateTo').value;
+  const pF = $('#reportPosFilter').value;
+  let list = DB.ledger.slice();
+  if(df) list = list.filter(r=>r.date>=df);
+  if(dt) list = list.filter(r=>r.date<=dt);
+  if(pF) list = list.filter(r=>r.pos===pF);
+  const r = calcRates(list);
+  $('#reportStat').innerHTML = `
+    <div class="s-item"><span class="s-num">${r.total}</span><span class="s-label">筛选范围记录数</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--blue)">${r.toMian}</span><span class="s-label">到面人数</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--green-text)">${r.pass}</span><span class="s-label">面试通过</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--primary)">${r.offerAccept}</span><span class="s-label">接受Offer</span></div>
+    <div class="s-item"><span class="s-num" style="color:var(--green-text)">${r.onboard}</span><span class="s-label">已入职</span></div>`;
+  $('#rateCards').innerHTML = `
+    <div class="rate-card"><div class="rate-num">${r.toMianRate}%</div><div class="rate-label">到面率</div><div class="rate-formula">到面人数 ÷ 全部人数</div></div>
+    <div class="rate-card"><div class="rate-num">${r.passRate}%</div><div class="rate-label">面试通过率</div><div class="rate-formula">面试通过 ÷ 到面人数</div></div>
+    <div class="rate-card"><div class="rate-num">${r.offerRate}%</div><div class="rate-label">Offer接受率</div><div class="rate-formula">接受Offer ÷ 面试通过</div></div>
+    <div class="rate-card"><div class="rate-num">${r.onboardRate}%</div><div class="rate-label">入职率</div><div class="rate-formula">入职人数 ÷ 面试通过</div></div>`;
+  // 职位筛选
+  const pSel = $('#reportPosFilter');
+  pSel.innerHTML = '<option value="">全部职位</option>'+DB.positions.map(p=>`<option value="${esc(p.name)}" ${p.name===pF?'selected':''}>${esc(p.name)}</option>`).join('');
+}
+function askNL(){
+  const q = ($('#nlQuery').value||'').trim();
+  const ans = $('#nlAnswer');
+  if(!q){ toast('请输入要查询的问题','warn'); return; }
+  let html = '';
+  const list = DB.ledger;
+  // 通过率查询
+  const mRate = q.match(/(二面|一面|终面|面试)?通过率/);
+  if(mRate){
+    const key = mRate[1]||'面试';
+    let base = list;
+    if(key==='二面') base = list.filter(r=>/二面|通过/.test(r.progress));
+    else if(key==='一面') base = list.filter(r=>/一面|通过/.test(r.progress));
+    else if(key==='终面') base = list.filter(r=>/通过/.test(r.progress));
+    const pass = base.filter(r=>r.progress==='通过').length;
+    const rate = base.length?Math.round(pass/base.length*1000)/10:0;
+    html = `「${key}通过率」= 面试通过 ${pass} 人 ÷ 到面 ${base.length} 人 = <b>${rate}%</b>（基于台账 ${list.length} 条记录）`;
+  }
+  // 职位入职情况
+  else if(/入职/.test(q)){
+    const pm = q.match(/^(.+?)岗位/) || q.match(/^(.+?)的/);
+    const posName = pm?pm[1]:'';
+    let base = posName ? list.filter(r=>r.pos===posName) : list;
+    const onboard = base.filter(r=>r.onboard==='已入职').length;
+    const wait = base.filter(r=>r.onboard==='待入职').length;
+    const giveUp = base.filter(r=>r.onboard==='放弃入职').length;
+    html = `${posName?('「'+posName+'」岗位'):'全部岗位'}入职情况：已入职 <b>${onboard}</b> 人，待入职 <b>${wait}</b> 人，放弃入职 <b>${giveUp}</b> 人，共 ${base.length} 条记录。`;
+  }
+  // 月份分析
+  else if(/月/.test(q) && /面试|分析|情况/.test(q)){
+    const mm = q.match(/(\d{1,2})月/);
+    const mon = mm?String(Number(mm[1])).padStart(2,'0'):'';
+    let base = mon ? list.filter(r=>r.date && r.date.slice(5,7)===mon) : list;
+    const toMian = base.filter(r=>r.progress && r.progress!=='').length;
+    const pass = base.filter(r=>r.progress==='通过').length;
+    html = `${mon?('2026年'+Number(mon)+'月'):'全部时间'}面试情况：记录 ${base.length} 条，到面 ${toMian} 人，面试通过 ${pass} 人，通过率 ${toMian?Math.round(pass/toMian*1000)/10:0}%。`;
+  }
+  // 某人面试时间
+  else if(/(多少号|哪天|几号).*(面试|面)/.test(q) || /面试的/.test(q)){
+    const nm = q.match(/([\u4e00-\u9fa5]{2,4})(?:是|在|多少号|哪天)/) || q.match(/([\u4e00-\u9fa5]{2,4})面试/);
+    const name = nm?nm[1]:'';
+    const recs = name ? list.filter(r=>r.name.includes(name)) : [];
+    if(recs.length){
+      html = `「${name}」在台账中的记录：<br>${recs.map(r=>`· ${r.date||'日期未填'} 面试「${r.pos||'未填职位'}」，进度：${r.progress||'未填'}，面试官：${r.interviewer||'未填'}`).join('<br>')}`;
+    }else{
+      html = `台账中没有找到「${name}」的面试记录（当前共 ${list.length} 条）。`;
+    }
+  }
+  else if(/到面率|通过率|offer|入职率/.test(q)){
+    const r = calcRates(list);
+    html = `基于台账 ${r.total} 条记录：到面率 ${r.toMianRate}%，面试通过率 ${r.passRate}%，Offer接受率 ${r.offerRate}%，入职率 ${r.onboardRate}%。`;
+  }
+  else{
+    html = `抱歉，我暂时不能理解这个问题。试试问：「二面通过率是多少？」「开发岗位的入职情况」「分析7月的面试情况」「张伟是多少号面试的？」<br><span class="text3">回答全部基于当前台账真实数据。</span>`;
+  }
+  ans.innerHTML = html;
+  ans.classList.add('show');
+}
+function quickAsk(q){ $('#nlQuery').value=q; askNL(); }
+
+/* ================================================================
+ * 评分记录历史
+ * ================================================================ */
+function renderHistory(){
+  const q = ($('#hisSearch').value||'').trim().toLowerCase();
+  const pF = $('#hisPosFilter').value, lF = $('#hisLevelFilter').value;
+  let list = DB.history.slice();
+  if(q) list = list.filter(h=>(h.name||'').toLowerCase().includes(q)||(h.pos||'').toLowerCase().includes(q)||(h.source||'').toLowerCase().includes(q));
+  if(pF) list = list.filter(h=>h.pos===pF);
+  if(lF) list = list.filter(h=>h.level===lF);
+  const pSel = $('#hisPosFilter');
+  pSel.innerHTML = '<option value="">全部职位</option>'+DB.positions.map(p=>`<option value="${esc(p.name)}" ${p.name===pF?'selected':''}>${esc(p.name)}</option>`).join('');
+  if(!list.length){ $('#hisList').innerHTML = '<div class="empty"><div class="e-ico">🕘</div><p>暂无评分记录，执行简历筛选后自动保存</p></div>'; return; }
+  $('#hisList').innerHTML = list.slice(0,100).map(h=>{
+    const dimsHtml = (h.dims||[]).map(d=>{
+      const evHtml = (d.evidence||[]).map(e=>`<div>· ${esc(e)}</div>`).join('');
+      return `<span class="ev-tip">${esc(d.name)} ${d.score}分<span class="ev-pop">得分依据：${evHtml||'无证据'}</span></span>`;
+    }).join('　');
+    const st = h.verdict==='unfit'?'<span class="badge badge-red">不合适库</span>':h.level==='A'||h.level==='B'?'<span class="badge badge-green">待确认</span>':'<span class="badge badge-gray">入库</span>';
+    return `<div class="his-card">
+      <div class="his-head">
+        <div class="flex gap8"><b class="fs16">${esc(h.name)}</b><span class="lev-${h.level}">${h.level}级</span>${st}</div>
+        <span class="fs12 text3">🕐 ${esc(h.time)} · 🎯 ${esc(h.pos)} · 📮 ${esc(h.source)}</span>
+      </div>
+      <div class="fs12" style="line-height:1.9">
+        <div>硬性门槛：${h.gate==='通过'?'<span class="badge badge-green" style="font-size:11px">通过</span>':'<span class="badge badge-red" style="font-size:11px">不通过</span>'}　总评分 <b style="color:var(--primary)">${h.score}分</b></div>
+        <div class="dim-ev">${dimsHtml}</div>
+      </div>
+      ${h.reason?`<div class="fs12 text2 mt8">✅ ${esc(h.reason)}</div>`:''}
+      ${h.failReason?`<div class="fs12 mt8" style="color:var(--red-text)">⛔ ${esc(h.failReason)}</div>`:''}
+    </div>`;
+  }).join('') + (list.length>100?`<div class="fs12 text3" style="text-align:center;padding:10px">仅显示最近 100 条，可输入关键词缩小范围</div>`:'');
+}
+
+/* ================================================================
+ * 职位库
+ * ================================================================ */
+function renderPositions(){
+  const grid = $('#posGrid');
+  const list = DB.positions;
+  if(!list.length){ grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="e-ico">📌</div><p>还没有职位，点击右上角「新增职位」</p></div>'; return; }
+  grid.innerHTML = list.map(p=>{
+    const candCount = DB.candidates.filter(c=>c.pos===p.name).length;
+    const ledgerCount = DB.ledger.filter(r=>r.pos===p.name).length;
+    const dims = (p.dims||DB.dims).map(d=>d.name+' '+d.weight+'%').join(' · ');
+    return `<div class="pos-card ${p.active?'':'disabled'}" onclick="openPosModal('${p.id}')">
+      <div class="pos-name">${esc(p.name)} <span class="pos-tag">${p.active?'招聘中':'已停用'}</span></div>
+      <div class="pos-city">📍 ${esc(p.city||'未设置城市')}</div>
+      <div class="pos-count">
+        <span>👥 人才库 <b>${candCount}</b> 份</span>
+        <span>📋 台账 <b>${ledgerCount}</b> 条</span>
+      </div>
+      <div class="fs12 text3 mt8" style="line-height:1.7">
+        ${p.jd?('📄 JD：'+esc(p.jd).slice(0,60)+(p.jd.length>60?'…':'')):'<span class="text3">📄 JD：未填写</span>'}
+      </div>
+      <div class="fs12 text3 mt8" style="line-height:1.7">⚖ 四维评分：${esc(dims)}</div>
+      <div class="pos-foot" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="openPosModal('${p.id}')">✏ 编辑</button>
+        <button class="btn ${p.active?'btn-yellow':'btn-green'} btn-sm" onclick="togglePos('${p.id}')">${p.active?'停用':'启用'}</button>
+        <button class="btn btn-red btn-sm" onclick="delPos('${p.id}')">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openPosModal(id){
+  const p = id ? DB.positions.find(x=>x.id===id) : null;
+  $('#posModalTitle').textContent = p?'编辑职位':'新增职位';
+  $('#posEditId').value = p?p.id:'';
+  $('#posName').value = p?p.name:'';
+  $('#posCity').value = p?p.city:'';
+  $('#posJd').value = p?p.jd:'';
+  $('#posHard').value = p?p.hard:'';
+  $('#posScreen').value = p?p.screen:'';
+  $('#posBoss').value = p?p.boss:'';
+  showModal('posMask');
+}
+function savePos(){
+  const name = $('#posName').value.trim();
+  if(!name){ toast('职位名称不能为空','warn'); return; }
+  const id = $('#posEditId').value;
+  if(id){
+    const p = DB.positions.find(x=>x.id===id);
+    Object.assign(p,{name,city:$('#posCity').value.trim(),jd:$('#posJd').value,hard:$('#posHard').value,screen:$('#posScreen').value,boss:$('#posBoss').value});
+    toast('职位已更新，筛选规则已实时同步','success');
+  }else{
+    DB.positions.push({id:uid(),name,city:$('#posCity').value.trim(),jd:$('#posJd').value,hard:$('#posHard').value,screen:$('#posScreen').value,knives:{knife1:[],knife2:[],knife3:[]},dims:[...DB.dims],boss:$('#posBoss').value,active:true});
+    toast('新职位已创建','success');
+  }
+  saveDB(); closeModal('posMask'); renderPositions(); renderTalent();
+}
+function togglePos(id){
+  const p = DB.positions.find(x=>x.id===id);
+  p.active = !p.active;
+  saveDB(); renderPositions();
+  toast(p.active?'职位已启用':'职位已停用','success');
+}
+function delPos(id){
+  const p = DB.positions.find(x=>x.id===id);
+  confirmBox('删除职位','确定删除职位「'+p.name+'」吗？已关联的简历分类与台账记录不会被删除。','删除',()=>{
+    DB.positions = DB.positions.filter(x=>x.id!==id);
+    saveDB(); renderPositions(); renderTalent(); renderWorkbench();
+    toast('职位已删除','success');
+  },true);
+}
+function importPositions(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.csv';
+  input.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      let text = ev.target.result;
+      if(text.charCodeAt(0)===0xFEFF) text = text.slice(1);
+      const rows = parseCSV(text);
+      if(rows.length<2){ toast('职位文件格式不正确','error'); return; }
+      const heads = rows[0].map(h=>h.trim());
+      const map = {'职位名称':'name','职位':'name','城市':'city','JD':'jd','职位描述':'jd','硬性要求':'hard','筛选要求':'screen','BOSS话术':'boss','招呼话术':'boss'};
+      rows.slice(1).forEach(r=>{
+        const rec={};
+        heads.forEach((h,i)=>{ rec[map[h]||h]=(r[i]||'').trim(); });
+        if(rec.name){
+          DB.positions.push({id:uid(),name:rec.name,city:rec.city||'',jd:rec.jd||'',hard:rec.hard||'',screen:rec.screen||'',knives:{knife1:[],knife2:[],knife3:[]},dims:[...DB.dims],boss:rec.boss||'',active:true});
+        }
+      });
+      saveDB(); renderPositions();
+      toast('职位导入完成','success');
+    };
+    reader.readAsText(f,'utf-8');
+  };
+  input.click();
+}
+
+/* ================================================================
+ * 定时筛选
+ * ================================================================ */
+function openTimerModal(){
+  $('#timerTime').value = DB.timer.time||'09:00';
+  $('#swTimer').classList.toggle('on', !!DB.timer.enabled);
+  $('#timerStateText').textContent = DB.timer.enabled?'已开启':'已关闭';
+  showModal('timerMask');
+}
+function saveTimer(){
+  DB.timer.enabled = $('#swTimer').classList.contains('on');
+  DB.timer.time = $('#timerTime').value||'09:00';
+  saveDB(); closeModal('timerMask'); renderWorkbench();
+  toast(DB.timer.enabled?'每日 '+DB.timer.time+' 自动筛选已开启':'定时筛选已关闭','success');
+}
+// 定时检测（每分钟检查一次，页面打开时生效）
+setInterval(()=>{
+  if(DB && DB.timer && DB.timer.enabled){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    if((hh+':'+mm)===DB.timer.time && !DB._lastTimerRun){
+      DB._lastTimerRun = today()+' '+hh+':'+mm;
+      saveDB();
+      runScreening();
+    }
+    if(DB._lastTimerRun && DB._lastTimerRun !== today()+' '+hh+':'+mm){
+      if((hh+':'+mm)!==DB.timer.time) DB._lastTimerRun = null;
+    }
+  }
+}, 30000);
+
+/* ================================================================
+ * 用户ID
+ * ================================================================ */
+function renderUid(){
+  $('#userId').textContent = DB.userId;
+  $('#userAva').textContent = (DB.userId||'HR').slice(0,2).toUpperCase();
+}
+$('#userChip').addEventListener('click',()=>{
+  $('#uidInput').value = DB.userId;
+  showModal('uidMask');
+});
+function saveUid(){
+  const v = $('#uidInput').value.trim();
+  if(!v){ toast('用户ID不能为空','warn'); return; }
+  DB.userId = v; saveDB(); renderUid(); closeModal('uidMask');
+  toast('用户ID已更新为 '+v,'success');
+}
+
+/* ================================================================
+ * 数据备份 / 恢复 / 重置
+ * ================================================================ */
+function backupData(){
+  const blob = new Blob([JSON.stringify(DB,null,2)],{type:'application/json;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Hr招聘工作台备份_'+today()+'.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},200);
+  toast('数据已备份（JSON 文件）','success');
+}
+function restoreData(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(!data || !data.positions || !data.candidates){ toast('备份文件格式不正确','error'); return; }
+        confirmBox('恢复数据','将使用备份文件覆盖当前本地数据（当前数据会先自动备份）。是否继续？','恢复',()=>{
+          const old = JSON.stringify(DB);
+          try{ localStorage.setItem(LS_KEY+'_pre_restore', old); }catch(e){}
+          DB = data; DB.version = APP_VERSION; saveDB();
+          renderAll(); renderWorkbench(); renderTalent(); renderPositions(); renderLedger();
+          toast('数据恢复成功','success');
+        });
+      }catch(err){ toast('备份文件解析失败：'+err.message,'error'); }
+    };
+    reader.readAsText(f,'utf-8');
+  };
+  input.click();
+}
+function resetData(){
+  confirmBox('清空数据','将删除本地全部数据并恢复为示例数据，此操作不可恢复。确定继续吗？','清空',()=>{
+    localStorage.removeItem(LS_KEY);
+    DB = seedData(); saveDB();
+    renderAll(); renderWorkbench(); renderTalent(); renderPositions(); renderLedger();
+    toast('已恢复为示例数据','success');
+  },true);
+}
+
+/* ================================================================
+ * 统一渲染入口
+ * ================================================================ */
+function renderAll(page){
+  renderUid();
+  $('#verLabel').textContent = APP_VERSION;
+  if(!page || ['workbench','talent','talent-fit','talent-unfit','talent-pending','screen','ledger','positions'].includes(page)){
+    renderWorkbench();
+    renderTalent();
+    renderKnives();
+    renderDims();
+    renderLedger();
+    renderPositions();
+  }
+  // 填充人才库职位筛选
+  const pSel = $('#talentPosFilter');
+  pSel.innerHTML = '<option value="">全部职位</option>'+DB.positions.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  // 同步筛选页职位选择器
+  const sp2 = $('#screenPos2');
+  if(sp2) sp2.innerHTML = '<option value="">全部职位</option>'+DB.positions.filter(p=>p.active).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+function today(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* ---------- 导航点击 ---------- */
+$$('.nav-item').forEach(n=>{
+  n.addEventListener('click', ()=>go(n.dataset.page));
+});
+
+/* ---------- 初始化 ---------- */
+loadDB();
+renderAll();
+go('talent');  // 默认进入人才库
+
+/* ---------- 键盘关闭弹窗 ---------- */
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ $$('.modal-mask.show').forEach(m=>m.classList.remove('show')); }
+});
+</script>
+</body>
+</html>
