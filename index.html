@@ -98,6 +98,17 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;mi
 .tbl .left{text-align:left}
 .th-sort{display:inline-flex;align-items:center;gap:3px;cursor:pointer;user-select:none}
 .th-arrow{font-size:9px;color:var(--text3)}
+.th-label{cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px}
+.th-label:hover{color:var(--primary)}
+.th-arr{font-size:10px;color:var(--text3)}
+.th-label:hover .th-arr{color:var(--primary)}
+.th-label.th-active{color:var(--primary)}
+.th-label.th-active .th-arr{color:var(--primary)}
+.th-label.th-active::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--primary);margin-left:2px}
+.th-dropdown-item{display:block;width:100%;text-align:left;padding:6px 14px;cursor:pointer;font-size:13px;color:var(--text);background:transparent;border:none;white-space:nowrap}
+.th-dropdown-item:hover{background:var(--primary-soft)}
+.th-dropdown-item.th-active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.th-dropdown-empty{padding:8px 14px;color:var(--text3);font-size:12px}
 /* 台账：删除按钮默认隐藏，悬停行显示淡红圆形减号 */
 .del-cell-btn{width:26px;height:26px;border-radius:50%;background:var(--red-bg);color:var(--red-text);font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;cursor:pointer}
 .tbl tbody tr:hover .del-cell-btn{opacity:1}
@@ -555,16 +566,16 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
             <thead>
               <tr>
                 <th style="width:36px"><input type="checkbox" class="ck" id="ckLedgerAll" onchange="toggleLedgerAll(this)"></th>
-                <th>日期<span class="th-arrow" style="margin-left:2px">▼</span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'date')">日期 <span class="th-arr">▼</span></span></th>
                 <th>姓名</th>
                 <th>电话</th>
-                <th>应聘职位</th>
-                <th>城市</th>
-                <th>面试官</th>
-                <th>面试进度</th>
-                <th>入职进度</th>
-                <th>Offer状态</th>
-                <th>备注</th>
+                <th><span class="th-label" onclick="openThFilter(this,'pos')">应聘职位 <span class="th-arr">▼</span></span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'city')">城市 <span class="th-arr">▼</span></span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'interviewer')">面试官 <span class="th-arr">▼</span></span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'progress')">面试进度 <span class="th-arr">▼</span></span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'onboard')">入职进度 <span class="th-arr">▼</span></span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'offer')">Offer状态 <span class="th-arr">▼</span></span></th>
+                <th><span class="th-label" onclick="openThFilter(this,'remark')">备注 <span class="th-arr">▼</span></span></th>
                 <th style="width:40px"></th>
               </tr>
             </thead>
@@ -1747,12 +1758,22 @@ function renderLedger(){
   if(dt) list = list.filter(r=>r.date<=dt);
   if(pF) list = list.filter(r=>r.pos===pF);
   if(gF) list = list.filter(r=>r.progress===gF);
+  // 表头下拉筛选（叠加生效，姓名/电话不受此筛选）
+  const thF = DB._thFilters || {};
+  list = list.filter(r=>{
+    for(const [k, v] of Object.entries(thF)){
+      if(v && (r[k]||'') !== v) return false;
+    }
+    return true;
+  });
   list.sort((a,b)=>{ const r = DB.ledgerSort==='desc'?-1:1; return (a.date<b.date?-1:1)*r; });
   // 表头筛选选项
   const pf = $('#ledgerPosFilter');
   pf.innerHTML = '<option value="">全部职位</option>'+DB.positions.map(p=>`<option value="${esc(p.name)}" ${p.name===pF?'selected':''}>${esc(p.name)}</option>`).join('');
   const gf = $('#ledgerProgressFilter');
   gf.innerHTML = '<option value="">全部面试进度</option>'+PROGRESS_OPTS.map(p=>`<option ${p===gF?'selected':''}>${p}</option>`).join('');
+  // 更新表头筛选状态（高亮+小圆点）
+  updateThFilterUI();
   // 统计
   const stats = calcLedgerStats(DB.ledger);
   $('#ledgerStat').innerHTML = `
@@ -2037,6 +2058,75 @@ function clearLedger(){
     toast('已清空 '+cnt+' 条台账记录','success');
   },true);
 }
+
+/* ---------- 表头下拉筛选 ---------- */
+function closeThDropdown(){
+  $$('.th-dropdown').forEach(d=>d.remove());
+}
+function openThFilter(labelEl, col){
+  event.stopPropagation();
+  // 切换：再次点击同一列关闭
+  if (labelEl.dataset.open === '1'){ closeThDropdown(); labelEl.dataset.open=''; return; }
+  closeThDropdown();
+  labelEl.dataset.open = '1';
+  // 从全部数据收集该列唯一值（不受其它筛选影响，让用户能看到该列完整候选）
+  const values = new Set();
+  DB.ledger.forEach(r=>{ const v = (r[col]||'').trim(); if(v) values.add(v); });
+  const sorted = Array.from(values).sort((a,b)=>{
+    if(col==='date') return b.localeCompare(a); // 日期降序（最新在前）
+    return a.localeCompare(b,'zh-CN');
+  });
+  const current = ((DB._thFilters||{})[col])||'';
+  const dd = document.createElement('div');
+  dd.className = 'th-dropdown';
+  dd.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:6px 0;max-height:280px;overflow:auto;z-index:200;min-width:140px';
+  // 全部 + 已筛
+  const makeItem = (val, label) => {
+    const it = document.createElement('button');
+    it.className = 'th-dropdown-item' + ((val||'')===current ? ' th-active' : '');
+    it.textContent = label;
+    it.onclick = e => { e.stopPropagation(); pickThFilter(col, val); };
+    return it;
+  };
+  dd.appendChild(makeItem('', '(全部)'));
+  sorted.forEach(v => dd.appendChild(makeItem(v, v)));
+  // 定位到表头下方
+  const r = labelEl.getBoundingClientRect();
+  dd.style.left = r.left + 'px';
+  dd.style.top = (r.bottom + 2) + 'px';
+  // 防止超出右边界
+  document.body.appendChild(dd);
+  setTimeout(()=>{
+    const dr = dd.getBoundingClientRect();
+    if(dr.right > window.innerWidth - 10) dd.style.left = (window.innerWidth - dr.width - 10) + 'px';
+  },0);
+}
+function pickThFilter(col, val){
+  DB._thFilters = DB._thFilters || {};
+  if(!val) delete DB._thFilters[col]; else DB._thFilters[col] = val;
+  closeThDropdown();
+  saveDB(); renderLedger();
+}
+function updateThFilterUI(){
+  const thF = DB._thFilters || {};
+  $$('.th-label').forEach(el=>{
+    const col = el.dataset.col; // 未设置，因为我们用的是 onclick 字符串
+    // 通过文本位置识别：直接根据 id 标记
+    const txt = el.textContent.trim();
+    let colKey = null;
+    if(txt.startsWith('日期')) colKey='date';
+    else if(txt.startsWith('应聘职位')) colKey='pos';
+    else if(txt.startsWith('城市')) colKey='city';
+    else if(txt.startsWith('面试官')) colKey='interviewer';
+    else if(txt.startsWith('面试进度')) colKey='progress';
+    else if(txt.startsWith('入职进度')) colKey='onboard';
+    else if(txt.startsWith('Offer状态')) colKey='offer';
+    else if(txt.startsWith('备注')) colKey='remark';
+    if(colKey && thF[colKey]) el.classList.add('th-active'); else el.classList.remove('th-active');
+  });
+}
+// 全局点击关闭下拉
+document.addEventListener('click', ()=>{ $$('.th-dropdown').forEach(d=>d.remove()); });
 async function exportLedger(){
   const HEADERS = ['日期','姓名','电话','应聘职位','城市','面试官','面试进度','Offer','入职进度','备注'];
   const rows = DB.ledger.map(r=>({
