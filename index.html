@@ -786,52 +786,9 @@ function seedData(){
     {id:'p5',name:'行业顾问',city:'杭州',jd:'深耕细分行业客户，提供解决方案咨询与销售支持。',hard:'本科及以上，有行业解决方案经验。',screen:'有行业客户资源，能理解客户业务场景。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，行业顾问岗位需要深耕行业经验，看了您的背景很合适！',active:true},
     {id:'p6',name:'售后',city:'成都',jd:'负责客户售后服务，处理问题工单，提升客户满意度。',hard:'大专及以上，服务意识强。',screen:'耐心细致，沟通能力强。',knives:{knife1:['个人消费','消费者','C端','门店销售','零售'],knife2:['交付','运营','售前','项目管理','售后','客服','行政','HR'],knife3:['%','达成率','万','销冠','业绩','回款额']},dims:[{name:'ToB经验',weight:50},{name:'AI能力',weight:25},{name:'行业匹配',weight:15},{name:'开拓经验',weight:10}],boss:'您好，我们售后岗位在招，期待沟通！',active:true}
   ];
+  // 人才库与台账初始为空，由用户自行录入（不再内置示例人选）
   const cands = [];
-  const mk = (id,name,age,title,pos,work,score,level,status,extra='') => ({
-    id,name,age,emailTitle:title,pos,source:'BOSS直聘',
-    work,score,level,status, reason:'',failReason:'',extra, createdAt: Date.now() - Math.floor(Math.random()*86400000*30)
-  });
-  // 示例候选人（A/B/C/D 混合）
-  cands.push(mk('c1','张伟',29,'【BOSS直聘】张伟-5年ToB大客户销售-北京','开发',
-    '2019-2024 北京云启科技 高级客户经理\n负责企业级SaaS产品的客户开拓与维护，累计完成回款额860万元，年度业绩达成率135%，连续两年获团队销冠。曾带领3人小组搭建华东区域客户网络，负责新人招聘与培训。\n2016-2019 北京蓝海信息 销售代表\n负责中小企业客户跟进，月均签约8家客户。',8.2,'A','new', '3年ToB大客户经验+管理经历+量化业绩'));
-  cands.push(mk('c2','李娜',26,'【猎聘】李娜-转化运营-上海','转化',
-    '2021-2024 上海聚客网络 转化专员\n负责线上线索电话转化，月均转化率28%，个人业绩回款额120万，连续6个月达成率110%以上。\n2020-2021 上海云舟 客服专员\n处理客户咨询与售后问题。',7.6,'A','new','转化经验+量化数据，但早期客服经历需关注'));
-  cands.push(mk('c3','王强',33,'【智联招聘】王强-销售经理-深圳','SMB销售经理',
-    '2017-2024 深圳启明科技 销售主管\n带领8人销售团队，负责制定团队目标与招聘培训，团队年业绩3200万，个人带领团队实现180%目标达成率。\n2014-2017 深圳星河 销售顾问\n面向中小企业销售，连续12个月业绩达成率超100%。',8.8,'A','new','真实管理经验+团队业绩+量化证据'));
-  cands.push(mk('c4','赵敏',24,'【BOSS直聘】赵敏-销售顾问-广州','销售顾问',
-    '2022-2024 广州拓客网络 销售顾问\n面向企业客户销售推广服务，月均签约6家，业绩达成率105%，个人年回款额68万。',6.8,'B','new','有ToB销售经验+量化数据'));
-  cands.push(mk('c5','陈浩',31,'【猎聘】陈浩-行业顾问-杭州','行业顾问',
-    '2018-2024 杭州数智云 行业顾问\n深耕教育行业客户，提供数据解决方案，年度业绩达成率120%，回款额500万，服务客户30余家。',7.2,'B','new','行业深耕+量化业绩'));
-  cands.push(mk('c6','刘洋',27,'【BOSS直聘】刘洋-开发工程师-北京','开发',
-    '2020-2024 北京中科软 开发工程师\n负责企业级系统研发，主导3个大型项目交付，管理5人开发小组，负责团队任务分配与新人培养。',6.5,'B','new','技术背景+项目管理经验'));
-  cands.push(mk('c7','孙丽',25,'【智联招聘】孙丽-转化专员-上海','转化',
-    '2021-2024 上海优单 转化专员\n负责平台线索转化，月均转化率22%，个人业绩90万。',5.8,'B','new','转化经验+量化数据'));
-  cands.push(mk('c8','周杰',29,'【BOSS直聘】周杰-大客户销售-北京','销售顾问',
-    '2019-2024 北京云联 大客户销售\n负责企业客户销售，年回款额300万，业绩达成率115%。',5.2,'B','new','ToB销售经验'));
-  cands.push(mk('c9','吴倩',23,'【猎聘】吴倩-行政助理-成都','售后',
-    '2023-2024 成都某公司 行政助理\n负责日常行政事务、档案管理与接待。',3.2,'C','new','行政背景，非销售岗位，可入库观察'));
-  cands.push(mk('c10','郑军',35,'【BOSS直聘】郑军-零售门店经理-重庆','SMB销售经理',
-    '2015-2024 重庆某零售连锁 门店经理\n负责门店零售销售，管理门店店员10人，门店年销售额2000万。',4.0,'D','new','ToC零售行业，第一刀排除', '零售行业'));
-  cands.push(mk('c11','冯雨',28,'【智联招聘】冯雨-客服主管-武汉','转化',
-    '2018-2024 武汉某电商 客服主管\n负责客服团队管理，处理客户投诉，团队10人。',3.5,'D','new','全部经历为客服，第二刀排除', '客服'));
-  cands.push(mk('c12','杨先生',30,'【BOSS直聘】杨先生-销售-苏州','销售顾问',
-    '2018-2024 苏州某科技公司 销售\n负责产品销售工作，业绩表现良好。',4.8,'C','new','销售经历但量化数据不足'));
-  cands.push(mk('c13','林晓',27,'【猎聘】林晓-售前顾问-南京','行业顾问',
-    '2019-2024 南京某软件 售前顾问\n负责售前方案讲解与技术支持。',3.8,'C','new','售前经历，非销售主导'));
-  cands.push(mk('c14','黄磊',26,'【BOSS直聘】黄磊-AI产品运营-杭州','转化',
-    '2020-2024 杭州智能云 AI产品运营\n负责AI产品用户增长与转化，月均转化率25%，使用AI工具提升效率30%，回款额150万。',7.9,'A','new','AI能力+转化经验+量化数据'));
-  cands.push(mk('c15','徐芳',32,'【猎聘】徐芳-外贸经理-宁波','SMB销售经理',
-    '2014-2024 宁波某外贸公司 外贸经理\n带领6人外贸团队，负责海外客户开拓，团队年出口额5000万，负责招聘培训与团队目标制定。',7.4,'B','new','管理经验+业绩量化，需确认ToB背景'));
-  const ledger = [
-    {id:'l1',date:'2026-07-08',name:'张伟',phone:'138****1234',pos:'开发',city:'北京',interviewer:'',progress:'通过',offer:'接受',onboard:'已入职',remark:'面试表现优秀'},
-    {id:'l2',date:'2026-07-15',name:'李娜',phone:'139****5678',pos:'转化',city:'上海',interviewer:'',progress:'待复试',offer:'',onboard:'',remark:'初面通过'},
-    {id:'l3',date:'2026-07-20',name:'王强',phone:'137****9012',pos:'SMB销售经理',city:'深圳',interviewer:'',progress:'通过',offer:'接受',onboard:'待入职',remark:'背调通过'},
-    {id:'l4',date:'2026-07-25',name:'赵敏',phone:'136****3456',pos:'销售顾问',city:'广州',interviewer:'',progress:'一面不通过',offer:'',onboard:'',remark:'表达一般'},
-    {id:'l5',date:'2026-08-02',name:'陈浩',phone:'135****7890',pos:'行业顾问',city:'杭州',interviewer:'',progress:'待谈薪',offer:'待发',onboard:'',remark:'谈薪中'},
-    {id:'l6',date:'2026-08-05',name:'黄磊',phone:'134****2345',pos:'转化',city:'杭州',interviewer:'',progress:'通过',offer:'接受',onboard:'待入职',remark:'AI背景加分'},
-    {id:'l7',date:'2026-08-08',name:'徐芳',phone:'133****6789',pos:'SMB销售经理',city:'宁波',interviewer:'',progress:'待背调',offer:'',onboard:'',remark:''},
-    {id:'l8',date:'2026-08-09',name:'孙丽',phone:'132****0123',pos:'转化',city:'上海',interviewer:'',progress:'二面不通过',offer:'',onboard:'',remark:'行业认知不足'}
-  ];
+  const ledger = [];
   return {version:APP_VERSION, userId:'HR-0001', email:{bound:false,addr:'',auto:'off',interval:24},
     positions, candidates:cands, ledger,
     timer:{enabled:false,time:'09:00'},
@@ -851,6 +808,24 @@ function loadDB(){
   if(!DB){ DB = seedData(); saveDB(); }
   // 版本保留
   DB.version = APP_VERSION;
+  // 数据迁移：移除旧版内置的示例人选（c1..c15 候选人 / l1..l8 台账记录 / 对应评分历史）
+  const DEMO_CAND = /^c\d+$/;
+  const DEMO_LED = /^l\d+$/;
+  const DEMO_NAMES = ['张伟','李娜','王强','赵敏','陈浩','刘洋','孙丽','周杰','吴倩','郑军','冯雨','杨先生','林晓','黄磊','徐芳'];
+  let migrated = false;
+  if(Array.isArray(DB.candidates) && DB.candidates.some(c=>DEMO_CAND.test(c.id||''))){
+    DB.candidates = DB.candidates.filter(c=>!DEMO_CAND.test(c.id||''));
+    migrated = true;
+  }
+  if(Array.isArray(DB.ledger) && DB.ledger.some(r=>DEMO_LED.test(r.id||''))){
+    DB.ledger = DB.ledger.filter(r=>!DEMO_LED.test(r.id||''));
+    migrated = true;
+  }
+  if(Array.isArray(DB.history) && DB.history.some(h=>DEMO_NAMES.includes(h.name))){
+    DB.history = DB.history.filter(h=>!DEMO_NAMES.includes(h.name));
+    migrated = true;
+  }
+  if(migrated) saveDB();
 }
 function saveDB(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch(e){} }
 function uid(){ return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
