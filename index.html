@@ -550,6 +550,7 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
       </div>
       <div id="ledgerTab-table">
         <div class="stat-line" id="ledgerStat"></div>
+        <div class="rate-cards" id="ledgerRateCards" style="margin-bottom:14px"></div>
         <div class="ledger-toolbar">
           <input type="date" class="input" id="ledgerDateFrom" style="width:150px" onchange="renderLedger()"> <span class="text3">至</span>
           <input type="date" class="input" id="ledgerDateTo" style="width:150px" onchange="renderLedger()">
@@ -1115,6 +1116,7 @@ function go(page){
     $('#talentSub').textContent = '点击候选人卡片可查看完整简历';
   }
   if(page==='screen') screenTab('rules');
+  if(page==='ledger') ledgerTab('table');
   renderAll(page);
 }
 
@@ -1783,6 +1785,13 @@ function renderLedger(){
     <div class="s-item"><span class="s-num" style="color:var(--primary)">${stats.offerAccept}</span><span class="s-label">接受Offer</span></div>
     <div class="s-item"><span class="s-num" style="color:var(--green-text)">${stats.onboard}</span><span class="s-label">已入职</span></div>
     <div class="s-item"><span class="s-num" style="color:var(--yellow-text)">${stats.onboardWait}</span><span class="s-label">待入职</span></div>`;
+  // 百分比卡片（基于当前筛选后的数据，实时更新）
+  const rc = calcRates(list);
+  $('#ledgerRateCards').innerHTML = `
+    <div class="rate-card"><div class="rate-num">${rc.toMianRate}%</div><div class="rate-label">到面率</div><div class="rate-formula">到面 ${rc.toMian} ÷ 全部 ${rc.total}</div></div>
+    <div class="rate-card"><div class="rate-num">${rc.passRate}%</div><div class="rate-label">面试通过率</div><div class="rate-formula">通过 ${rc.pass} ÷ 到面 ${rc.toMian}</div></div>
+    <div class="rate-card"><div class="rate-num">${rc.offerRate}%</div><div class="rate-label">Offer接受率</div><div class="rate-formula">接受 ${rc.offerAccept} ÷ 通过 ${rc.pass}</div></div>
+    <div class="rate-card"><div class="rate-num">${rc.onboardRate}%</div><div class="rate-label">入职率</div><div class="rate-formula">入职 ${rc.onboard} ÷ 通过 ${rc.pass}</div></div>`;
   // 交替日期分组
   const dateOrder = [...new Set(list.map(r=>r.date))];
   const dateAlt = {};
