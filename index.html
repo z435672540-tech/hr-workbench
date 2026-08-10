@@ -717,9 +717,9 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
           <button data-v="7" onclick="setRange('7')">7天</button>
           <button data-v="30" onclick="setRange('30')">30天</button>
         </div>
-        <div class="hint">收取时只导入最近 N 天内收到的简历邮件</div>
+        <div class="hint">演示收取时按所选天数过滤演示简历（网页版无法直接读取真实邮箱邮件）</div>
       </div>
-      <div class="hint">只导入来自 BOSS直聘、猎聘、智联招聘等平台的简历邮件；使用增量同步，已检查过的邮件不会重复全量读取；根据简历标题、附件特征和候选人信息自动去重。</div>
+      <div class="hint" style="color:var(--red-text)">⚠ 网页版受浏览器安全限制，无法直接连接邮箱读取真实邮件。真实简历请用「手动上传」或「邮箱下载附件后导入」。</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('mailMask')">取消</button>
@@ -1392,49 +1392,45 @@ function saveMail(){
 }
 function receiveMail(){
   if(!DB.email.bound){ toast('请先绑定邮箱','warn'); openMailModal(); return; }
-  showLoading();
-  setTimeout(()=>{
-    // 增量同步：记录已检查过的邮件标识，避免重复全量读取
-    DB.email.seenMails = DB.email.seenMails || [];
-    const rangeDays = DB.email.range || 7;
-    // 模拟邮箱里最近 rangeDays 天收到的简历邮件
-    const mailPool = [
-      {key:'mail_'+'钱进'+'_转化_20260801', name:'钱进', pos:'转化', days:0, age:27},
-      {key:'mail_'+'何军'+'_开发_20260802', name:'何军', pos:'开发', days:1, age:29},
-      {key:'mail_'+'罗琳'+'_SMB销售经理_20260729', name:'罗琳', pos:'SMB销售经理', days:3, age:31},
-      {key:'mail_'+'孟强'+'_销售顾问_20260725', name:'孟强', pos:'销售顾问', days:5, age:26},
-      {key:'mail_'+'高远'+'_行业顾问_20260720', name:'高远', pos:'行业顾问', days:8, age:33},
-      {key:'mail_'+'杜娟'+'_售后_20260712', name:'杜娟', pos:'售后', days:12, age:25},
-      {key:'mail_'+'许峰'+'_开发_20260705', name:'许峰', pos:'开发', days:20, age:28},
-      {key:'mail_'+'秦悦'+'_转化_20260625', name:'秦悦', pos:'转化', days:35, age:24}
-    ];
-    const cutoff = Date.now() - rangeDays*86400000;
-    const fresh = mailPool.filter(m => m.days <= rangeDays);   // 按所选天数过滤
-    const dedupe = new Set();                                    // 去重：标题+附件特征+候选人信息
-    const existing = new Set(DB.candidates.map(c=>(c.emailTitle||'')+'|'+(c.name||'')));
-    let added = 0;
-    fresh.forEach(m=>{
-      const title = `【BOSS直聘】${m.name}-${m.pos}-简历`;
-      // 已检查过（增量同步）或已存在（去重）则跳过
-      if(DB.email.seenMails.includes(m.key)) return;
-      if(existing.has(title+'|'+m.name)) return;
-      if(dedupe.has(title+'|'+m.name)) return;
-      dedupe.add(title+'|'+m.name);
-      DB.email.seenMails.push(m.key);
-      DB.candidates.unshift({
-        id:uid(), name:m.name, age:m.age, pos:m.pos,
-        emailTitle:title,
-        source:'BOSS直聘', score:null, level:null, status:'new',
-        work:'（新收取简历，待AI筛选解析）', reason:'',failReason:'',extra:'新收取', createdAt:Date.now()-m.days*86400000
+  // 网页版受浏览器安全限制，无法直接连接邮箱服务器读取真实邮件。
+  // 明确告知用户，并提供真实可用的替代方案；如需体验流程可加载演示数据。
+  confirmBox('无法直接收取邮箱邮件',
+    '网页版受浏览器安全限制，无法直接连接你的邮箱服务器读取真实邮件（需桌面应用或后端服务才能实现）。\n\n两个真实可用的方案：\n① 手动上传简历：人才库 → 「⬆ 手动上传简历」，选择 PDF/Word 简历文件\n② 邮箱转发：在邮箱里把简历邮件转发/下载到本地，再用手动上传导入\n\n是否加载一批「演示简历」体验收取流程？（会明确标注为演示数据）',
+    '加载演示简历',()=>{
+    showLoading();
+    setTimeout(()=>{
+      DB.email.seenMails = DB.email.seenMails || [];
+      const rangeDays = DB.email.range || 7;
+      // 明确标注的演示数据（不是真实邮箱邮件）
+      const mailPool = [
+        {key:'demo_钱进_转化', name:'钱进', pos:'转化', days:0, age:27},
+        {key:'demo_何军_开发', name:'何军', pos:'开发', days:1, age:29},
+        {key:'demo_罗琳_SMB销售经理', name:'罗琳', pos:'SMB销售经理', days:3, age:31},
+        {key:'demo_孟强_销售顾问', name:'孟强', pos:'销售顾问', days:5, age:26},
+        {key:'demo_高远_行业顾问', name:'高远', pos:'行业顾问', days:8, age:33}
+      ];
+      const fresh = mailPool.filter(m => m.days <= rangeDays);
+      const existing = new Set(DB.candidates.map(c=>(c.emailTitle||'')+'|'+(c.name||'')));
+      let added = 0;
+      fresh.forEach(m=>{
+        if(DB.email.seenMails.includes(m.key)) return;
+        const title = `【演示】${m.name}-${m.pos}-简历`;
+        if(existing.has(title+'|'+m.name)) return;
+        DB.email.seenMails.push(m.key);
+        DB.candidates.unshift({
+          id:uid(), name:m.name, age:m.age, pos:m.pos,
+          emailTitle:title,
+          source:'演示数据', score:null, level:null, status:'new',
+          work:'（演示简历，待AI筛选解析）', reason:'',failReason:'',extra:'演示数据', createdAt:Date.now()-m.days*86400000
+        });
+        added++;
       });
-      added++;
-    });
-    // 控制已检查记录数量（保留最近 2000 条标识）
-    if(DB.email.seenMails.length > 2000) DB.email.seenMails = DB.email.seenMails.slice(-2000);
-    saveDB(); renderWorkbench(); renderTalent();
-    hideLoading();
-    toast(`增量收取完成（最近 ${rangeDays} 天）：新增 ${added} 份简历，已跳过 ${fresh.length-added} 份重复/已检查邮件`,'success');
-  }, 900);
+      if(DB.email.seenMails.length > 2000) DB.email.seenMails = DB.email.seenMails.slice(-2000);
+      saveDB(); renderWorkbench(); renderTalent();
+      hideLoading();
+      toast(`已加载 ${added} 份演示简历（演示数据，非邮箱真实邮件）`,'warn');
+    }, 600);
+  });
 }
 
 /* ---------- 上传 ---------- */
