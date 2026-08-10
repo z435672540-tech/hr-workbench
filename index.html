@@ -1208,20 +1208,58 @@ function renderDims(){
   $('#dimTotal').innerHTML = '权重合计：<b style="color:'+(total===100?'var(--green-text)':'var(--red-text)')+'">'+total+'%</b>'+(total===100?'（已归一）':'（点击任意滑块自动归一）');
 }
 function setDimW(i,v){
-  DB.dims[i].weight = Number(v);
-  // 自动归一
-  const total = DB.dims.reduce((s,d)=>s+d.weight,0);
-  if(total!==100){
-    const diff = 100-total;
-    // 将差值加到第一个权重>0的维度
-    const others = DB.dims.map((d,idx)=>({d,idx})).filter(x=>x.idx!==i && x.d.weight>0);
-    let left = diff;
-    for(const o of others){
-      const add = Math.round(left/(others.length||1));
-      o.d.weight = Math.max(0, o.d.weight+add);
-      left -= add;
+  let val = Number(v);
+  if(isNaN(val)) return;
+  const n = DB.dims.length;
+  const isLast = (i === n-1);
+  // 上限：中间行 = 当前值+后续总和（保证后续行可吸收、不超100）
+  //       最后一行 = 100（差额由前面所有行按比例整体归一吸收）
+  let afterSum = 0;
+  for(let j=i+1; j<n; j++) afterSum += DB.dims[j].weight;
+  const vMax = isLast ? 100 : (DB.dims[i].weight + afterSum);
+  val = Math.max(0, Math.min(Math.round(vMax), Math.round(val)));
+  const delta = val - DB.dims[i].weight;   // 当前行变化量
+  DB.dims[i].weight = val;
+  // 差额先由后续行按顺序吸收：第一行变→第二行增减，第二行变→第三行增减，依此类推
+  let remain = delta;                      // >0 后续需减少；<0 后续需增加
+  for(let j=i+1; j<n && Math.abs(remain) > 0.0001; j++){
+    if(remain > 0){
+      const take = Math.min(DB.dims[j].weight, remain);
+      DB.dims[j].weight -= take;
+      remain -= take;
+    } else {
+      DB.dims[j].weight += (-remain);
+      remain = 0;
     }
-    if(left!==0) DB.dims[i].weight = Math.max(0, DB.dims[i].weight+left);
+  }
+  // 剩余差额交给前面行按比例整体归一（拖最后一行时的"整体归一原则"）
+  if(Math.abs(remain) > 0.0001){
+    const front = DB.dims.slice(0, i);
+    const fs0 = front.reduce((s,d)=>s+d.weight,0);
+    if(fs0 > 0){
+      const target = Math.max(0, fs0 - remain);   // remain>0 前面行要减少
+      const ratio = target / fs0;
+      front.forEach(d=>{ d.weight = Math.round(d.weight * ratio); });
+      let s = front.reduce((a,d)=>a+d.weight,0);
+      let dff = target - s;                        // 修匀取整误差
+      for(let k=0; k<front.length && dff!==0; k++){
+        if(dff > 0){ front[k].weight += dff; dff = 0; }
+        else {
+          const cut = Math.min(front[k].weight, -dff);
+          front[k].weight -= cut; dff += cut;
+        }
+      }
+    }
+  }
+  // 兜底：消除浮点/取整误差，保证总和恰好 100
+  DB.dims.forEach(d=>{ d.weight = Math.max(0, Math.round(d.weight)); });
+  let total = DB.dims.reduce((s,d)=>s+d.weight,0);
+  let idx = 0;
+  while(total !== 100 && idx < n){
+    const room = 100 - DB.dims[idx].weight;
+    const adj = Math.max(-DB.dims[idx].weight, Math.min(room, 100 - total));
+    if(adj !== 0){ DB.dims[idx].weight += adj; total += adj; }
+    idx++;
   }
   saveDB(); renderDims();
 }
