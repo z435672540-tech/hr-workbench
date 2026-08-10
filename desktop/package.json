@@ -1,0 +1,60 @@
+{
+  "name": "hr-workbench",
+  "productName": "Hr招聘工作台",
+  "version": "1.0.0",
+  "description": "Hr招聘工作台 - 本地招聘管理桌面应用",
+  "main": "main.js",
+  "author": "HR Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64",
+    "dist:mac": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "build": {
+    "appId": "com.hr.workbench",
+    "productName": "Hr招聘工作台",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "Hr招聘工作台-${version}-Setup.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hr招聘工作台"
+    },
+    "mac": {
+      "target": ["zip", "dmg"],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.business"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://hr-bench-1466117969.cos.ap-guangzhou.myqcloud.com"
+    }
+  }
+}
