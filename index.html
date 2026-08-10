@@ -218,7 +218,10 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
 .dim-name:hover{background:var(--primary-soft);color:var(--primary)}
 .dim-slider{flex:1}
 .dim-slider input[type=range]{width:100%;accent-color:var(--primary)}
-.dim-w{width:60px;text-align:right;font-size:13px;color:var(--primary);font-weight:600}
+.dim-w{width:70px;text-align:right;flex-shrink:0}
+.dim-input{width:64px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:13px;color:var(--primary);font-weight:600;text-align:right;background:#fff}
+.dim-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,93,231,.1);outline:none}
+.dim-input::-webkit-inner-spin-button{opacity:.4}
 .dim-total{font-size:12px;color:var(--text3);text-align:right;margin-top:6px}
 
 /* ===== 台账 ===== */
@@ -1201,11 +1204,25 @@ function renderDims(){
   rows.innerHTML = DB.dims.map((d,i)=>`
     <div class="dim-row">
       <div class="dim-name" title="右键点击编辑维度名称" oncontextmenu="event.preventDefault();editDimName(${i})" onclick="editDimName(${i})">${esc(d.name)}</div>
-      <div class="dim-slider"><input type="range" min="0" max="100" value="${d.weight}" oninput="setDimW(${i},this.value)"></div>
-      <div class="dim-w" id="dimW${i}">${d.weight}%</div>
+      <div class="dim-slider"><input type="range" class="dim-range" min="0" max="100" value="${d.weight}" oninput="setDimW(${i},this.value)"></div>
+      <div class="dim-w"><input type="number" class="dim-input" id="dimW${i}" min="0" max="100" value="${d.weight}" onchange="setDimW(${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="直接输入占比（自动联动后续行并归一）"></div>
     </div>`).join('');
+  updateDimTotal();
+}
+function updateDimTotal(){
   const total = DB.dims.reduce((s,d)=>s+d.weight,0);
-  $('#dimTotal').innerHTML = '权重合计：<b style="color:'+(total===100?'var(--green-text)':'var(--red-text)')+'">'+total+'%</b>'+(total===100?'（已归一）':'（点击任意滑块自动归一）');
+  const el = $('#dimTotal');
+  if(el) el.innerHTML = '权重合计：<b style="color:'+(total===100?'var(--green-text)':'var(--red-text)')+'">'+total+'%</b>'+(total===100?'（已归一）':'（调整后自动归一）');
+}
+// 拖动/输入后轻量刷新：只更新数值与滑块位置，不重建列表（保证滑块可实时拖动）
+function refreshDimUI(){
+  DB.dims.forEach((d,i)=>{
+    const inp = document.getElementById('dimW'+i);
+    if(inp) inp.value = d.weight;
+  });
+  const ranges = document.querySelectorAll('#dimRows .dim-range');
+  ranges.forEach((r,idx)=>{ if(idx < DB.dims.length) r.value = DB.dims[idx].weight; });
+  updateDimTotal();
 }
 function setDimW(i,v){
   let val = Number(v);
@@ -1261,7 +1278,7 @@ function setDimW(i,v){
     if(adj !== 0){ DB.dims[idx].weight += adj; total += adj; }
     idx++;
   }
-  saveDB(); renderDims();
+  saveDB(); refreshDimUI();
 }
 function editDimName(i){
   const v = prompt('修改维度名称：', DB.dims[i].name);
