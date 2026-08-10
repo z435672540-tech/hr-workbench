@@ -833,6 +833,222 @@ function loadDB(){
 function saveDB(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch(e){} }
 function uid(){ return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
+/* ---------- xlsx 工具（CRC32 / deflate-raw / zip / parse） ---------- */
+const _CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(u8){
+  let c = 0xffffffff;
+  for (let i = 0; i < u8.length; i++) c = _CRC_TABLE[(c ^ u8[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+async function deflateRaw(u8){
+  const blob = new Blob([u8]);
+  const stream = blob.stream().pipeThrough(new CompressionStream('deflate-raw'));
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+async function inflateRaw(u8){
+  const blob = new Blob([u8]);
+  const stream = blob.stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+function colToLetters(col){
+  // 0->A, 25->Z, 26->AA
+  let s=''; let n = col+1;
+  while(n>0){ const r = (n-1) % 26; s = String.fromCharCode(65+r) + s; n = Math.floor((n-1)/26); }
+  return s;
+}
+function lettersToCol(letters){
+  let n = 0;
+  for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);
+  return n - 1;
+}
+function xmlEscape(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+async function buildZip(files){
+  // files: [{name, content: Uint8Array}]
+  // 压缩每个条目，生成 Local File Header + Central Directory + EOCD
+  const encoded = [];
+  for (const f of files){
+    const compressed = await deflateRaw(f.content);
+    const crc = crc32(f.content);
+    const nameBytes = new TextEncoder().encode(f.name);
+    encoded.push({nameBytes, content: f.content, compressed, crc});
+  }
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  for (const e of encoded){
+    const nameLen = e.nameBytes.length;
+    // Local File Header
+    const lh = new Uint8Array(30 + nameLen);
+    const lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);    // version
+    lv.setUint16(6, 0, true);     // flags
+    lv.setUint16(8, 8, true);     // method: deflate
+    lv.setUint16(10, 0, true);    // mtime
+    lv.setUint16(12, 0x21, true);  // mdate (1980-01-01)
+    lv.setUint32(14, e.crc, true);
+    lv.setUint32(18, e.compressed.length, true);
+    lv.setUint32(22, e.content.length, true);
+    lv.setUint16(26, nameLen, true);
+    lv.setUint16(28, 0, true);    // extra
+    lh.set(e.nameBytes, 30);
+    chunks.push(lh, e.compressed);
+    // Central Directory File Header
+    const cd = new Uint8Array(46 + nameLen);
+    const cv = new DataView(cd.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);    // version made by
+    cv.setUint16(6, 20, true);    // version needed
+    cv.setUint16(8, 0, true);     // flags
+    cv.setUint16(10, 8, true);    // method
+    cv.setUint16(12, 0, true);    // mtime
+    cv.setUint16(14, 0x21, true);  // mdate
+    cv.setUint32(16, e.crc, true);
+    cv.setUint32(20, e.compressed.length, true);
+    cv.setUint32(24, e.content.length, true);
+    cv.setUint16(28, nameLen, true);
+    cv.setUint16(30, 0, true);    // extra
+    cv.setUint16(32, 0, true);    // comment
+    cv.setUint16(34, 0, true);    // disk
+    cv.setUint16(36, 0, true);    // int attrs
+    cv.setUint32(38, 0, true);    // ext attrs
+    cv.setUint32(42, offset, true);
+    cd.set(e.nameBytes, 46);
+    central.push(cd);
+    offset += lh.length + e.compressed.length;
+  }
+  // EOCD
+  const cdOffset = offset;
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(4, 0, true);
+  ev.setUint16(6, 0, true);
+  ev.setUint16(8, central.length, true);
+  ev.setUint16(10, central.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, cdOffset, true);
+  ev.setUint16(20, 0, true);
+  // 合并所有 chunk
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  for (const c of central) total += c.length;
+  total += eocd.length;
+  const out = new Uint8Array(total);
+  let pos = 0;
+  for (const c of chunks){ out.set(c, pos); pos += c.length; }
+  for (const c of central){ out.set(c, pos); pos += c.length; }
+  out.set(eocd, pos);
+  return out;
+}
+async function parseXlsx(arrayBuffer){
+  // 读取 zip 字节，定位 EOCD，解析 Central Directory，解压 sheet1.xml 和 sharedStrings.xml
+  const data = new Uint8Array(arrayBuffer);
+  if (data.length < 22) throw new Error('文件过小');
+  // 找 EOCD 签名 0x06054b50（从末尾向前找，最大注释 65535）
+  let eocdOffset = -1;
+  for (let i = data.length - 22; i >= Math.max(0, data.length - 65557); i--){
+    if (data[i]===0x50 && data[i+1]===0x4b && data[i+2]===0x05 && data[i+3]===0x06){
+      eocdOffset = i; break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('不是有效的 xlsx（zip）文件');
+  const ev = new DataView(data.buffer, eocdOffset, 22);
+  const cdEntries = ev.getUint16(10, true);
+  const cdOffset = ev.getUint32(16, true);
+  // 解析 Central Directory 找到目标文件
+  const fileMap = {};
+  let p = cdOffset;
+  for (let i = 0; i < cdEntries; i++){
+    if (p + 46 > data.length) break;
+    const cv = new DataView(data.buffer, p, 46);
+    const nameLen = cv.getUint16(28, true);
+    const extraLen = cv.getUint16(30, true);
+    const commentLen = cv.getUint16(32, true);
+    const localOffset = cv.getUint32(42, true);
+    const name = new TextDecoder().decode(data.slice(p+46, p+46+nameLen));
+    fileMap[name] = {localOffset, cdPos: p};
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  // 读取并解压 sheet1.xml 和 sharedStrings.xml
+  async function readFileEntry(name){
+    const info = fileMap[name];
+    if (!info) return null;
+    const lv = new DataView(data.buffer, info.localOffset, 30);
+    const compMethod = lv.getUint16(8, true);
+    const compSize = lv.getUint32(18, true);
+    const fileNameLen = lv.getUint16(26, true);
+    const extraLen = lv.getUint16(28, true);
+    const dataStart = info.localOffset + 30 + fileNameLen + extraLen;
+    const compressed = data.slice(dataStart, dataStart + compSize);
+    if (compMethod === 0) return compressed;
+    if (compMethod === 8) return await inflateRaw(compressed);
+    throw new Error('不支持的压缩方法: ' + compMethod);
+  }
+  const sheetBytes = await readFileEntry('xl/worksheets/sheet1.xml');
+  if (!sheetBytes) throw new Error('未找到工作表 sheet1.xml');
+  const sheetXml = new TextDecoder('utf-8').decode(sheetBytes);
+  const ssBytes = await readFileEntry('xl/sharedStrings.xml');
+  let ssItems = [];
+  if (ssBytes){
+    const ssXml = new TextDecoder('utf-8').decode(ssBytes);
+    const ssDoc = new DOMParser().parseFromString(ssXml, 'text/xml');
+    ssItems = [...ssDoc.querySelectorAll('si')].map(si => {
+      // 处理富文本（多 t/r/t）—— 简化：拼接所有 t
+      return [...si.querySelectorAll('t')].map(t=>t.textContent).join('') || si.textContent || '';
+    });
+  }
+  // 解析 sheet rows
+  const sheetDoc = new DOMParser().parseFromString(sheetXml, 'text/xml');
+  const rows = [...sheetDoc.querySelectorAll('row')];
+  const out = [];
+  rows.forEach(row => {
+    const cells = [...row.querySelectorAll('c')];
+    const rowData = {};
+    cells.forEach(c => {
+      const ref = c.getAttribute('r') || '';
+      const m = ref.match(/^([A-Z]+)/);
+      if (!m) return;
+      const colIdx = lettersToCol(m[1]);
+      const t = c.getAttribute('t') || '';
+      let val = '';
+      if (t === 's'){
+        const v = c.querySelector('v');
+        const idx = v ? parseInt(v.textContent) : -1;
+        val = (idx >= 0 && idx < ssItems.length) ? ssItems[idx] : '';
+      } else if (t === 'inlineStr'){
+        const is = c.querySelector('is');
+        if (is) val = [...is.querySelectorAll('t')].map(x=>x.textContent).join('') || is.textContent || '';
+      } else if (t === 'str'){
+        const v = c.querySelector('v');
+        val = v ? v.textContent : '';
+      } else {
+        // number（含日期序列号）
+        const v = c.querySelector('v');
+        val = v ? v.textContent : '';
+      }
+      rowData[colIdx] = val;
+    });
+    const keys = Object.keys(rowData).map(Number).sort((a,b)=>a-b);
+    const arr = keys.map(k => rowData[k]);
+    out.push(arr);
+  });
+  return out; // [[headers], [row1], [row2], ...]
+}
+
 /* ---------- 工具 ---------- */
 function $(s){ return document.querySelector(s); }
 function $$(s){ return document.querySelectorAll(s); }
@@ -1649,48 +1865,76 @@ function dedupeLedger(){
 let lastImport = null;
 function importLedger(){
   const input = document.createElement('input');
-  input.type='file'; input.accept='.csv,.xlsx,.xls';
-  input.onchange = e=>{
+  input.type='file'; input.accept='.xlsx,.xls,.csv';
+  input.onchange = async e=>{
     const f = e.target.files[0];
     if(!f) return;
+    const ext = (f.name.split('.').pop()||'').toLowerCase();
+    // 按扩展名/Magic bytes 分发
+    if (ext === 'xlsx' || ext === 'xls'){
+      const reader = new FileReader();
+      reader.onload = async ev=>{
+        try{
+          const rows = await parseXlsx(ev.target.result);
+          processImportedRows(rows, f.name);
+        }catch(err){
+          toast('xlsx 解析失败：'+err.message,'error');
+        }
+      };
+      reader.readAsArrayBuffer(f);
+      return;
+    }
+    // CSV
     const reader = new FileReader();
     reader.onload = ev=>{
-      // CSV 解析（支持 UTF-8 BOM）
       let text = ev.target.result;
-      if(text.charCodeAt(0)===0xFEFF) text = text.slice(1);
+      if (text.charCodeAt(0)===0xFEFF) text = text.slice(1);
       const rows = parseCSV(text);
-      if(!rows.length){ toast('文件为空或无法解析','error'); return; }
-      lastImport = {before: DB.ledger.slice()};
-      const headers = rows[0].map(h=>h.trim());
-      const map = {'姓名':'name','电话':'phone','手机':'phone','应聘职位':'pos','职位':'pos','城市':'city','面试官':'interviewer','日期':'date','面试时间':'date','面试进度':'progress','入职进度':'onboard','入职状态':'onboard','Offer':'offer','offer':'offer','备注':'remark','推荐/到面':'progress'};
-      rows.slice(1).forEach(r=>{
-        const rec = {};
-        headers.forEach((h,i)=>{
-          const k = map[h]||h;
-          let v = (r[i]||'').trim();
-          // 无年份日期按2026年
-          if(k==='date' && v && !/^\d{4}-/.test(v)){
-            const m = v.match(/(\d{1,2})[.\/-](\d{1,2})/);
-            if(m) v = '2026-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
-          }
-          // 推荐/到面 → 通过 = 已到面
-          if(h==='推荐/到面' && v==='通过'){ rec.progress = '通过'; }
-          rec[k]=v;
-        });
-        // 到面无后续 → 一面不通过；有初面无后续 → 放弃复试
-        if(!rec.progress && rec.remark && /初面|一面/.test(rec.remark)) rec.progress = '放弃复试';
-        if(rec.onboard==='已入职' && !rec.date) rec.date = today();
-        if(rec.progress==='通过' && !rec.onboard && !rec.offer) rec.offer='拒绝';
-        if(rec.name){
-          DB.ledger.unshift({id:uid(),date:rec.date||'',name:rec.name,phone:rec.phone||'',pos:rec.pos||'',city:rec.city||'',interviewer:rec.interviewer||'',progress:rec.progress||'',offer:rec.offer||'',onboard:rec.onboard||'',remark:rec.remark||''});
-        }
-      });
-      saveDB(); renderLedger(); renderWorkbench();
-      toast('Excel 导入完成：新增 '+(DB.ledger.length-lastImport.before.length)+' 条记录','success');
+      processImportedRows(rows, f.name);
     };
     reader.readAsText(f, 'utf-8');
   };
   input.click();
+}
+function processImportedRows(rows, filename){
+  if(!rows || !rows.length){ toast('文件为空或无法解析','error'); return; }
+  // 智能表头识别：寻找包含 姓名/日期 等关键字的那一行（兼容 Excel 模板中前面有空行的情况）
+  let headerIdx = 0;
+  const headerKeys = ['姓名','日期','电话','应聘职位','职位','城市','面试官','面试进度','入职进度','offer','备注'];
+  for (let i = 0; i < Math.min(5, rows.length); i++){
+    if (rows[i].some(c => headerKeys.includes(String(c).trim()))){
+      headerIdx = i; break;
+    }
+  }
+  const headers = rows[headerIdx].map(h=>String(h).trim());
+  const dataRows = rows.slice(headerIdx + 1);
+  if (!dataRows.length){ toast('未识别到数据行','warn'); return; }
+  lastImport = {before: DB.ledger.slice()};
+  const map = {'姓名':'name','电话':'phone','手机':'phone','应聘职位':'pos','职位':'pos','城市':'city','面试官':'interviewer','日期':'date','面试时间':'date','面试进度':'progress','入职进度':'onboard','入职状态':'onboard','Offer':'offer','offer':'offer','备注':'remark','推荐/到面':'progress'};
+  let added = 0;
+  dataRows.forEach(r=>{
+    const rec = {};
+    headers.forEach((h, i)=>{
+      const k = map[h]||h;
+      let v = String(r[i]||'').trim();
+      // 无年份日期按2026年
+      if (k==='date' && v && !/^\d{4}-/.test(v)){
+        const m = v.match(/(\d{1,2})[.\/-](\d{1,2})/);
+        if (m) v = '2026-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
+      }
+      if (h==='推荐/到面' && v==='通过') rec.progress = '通过';
+      rec[k] = v;
+    });
+    if (!rec.progress && rec.remark && /初面|一面/.test(rec.remark)) rec.progress = '放弃复试';
+    if (rec.onboard==='已入职' && !rec.date) rec.date = today();
+    if (rec.progress==='通过' && !rec.onboard && !rec.offer) rec.offer = '拒绝';
+    if (rec.name){
+      DB.ledger.unshift({id:uid(),date:rec.date||'',name:rec.name,phone:rec.phone||'',pos:rec.pos||'',city:rec.city||'',interviewer:rec.interviewer||'',progress:rec.progress||'',offer:rec.offer||'',onboard:rec.onboard||'',remark:rec.remark||''});
+      added++;
+    }
+  });
+  saveDB(); renderLedger(); renderWorkbench();
+  toast((filename.endsWith('.xlsx')?'Excel':'CSV')+' 导入完成：新增 '+added+' 条记录', added?'success':'warn');
 }
 function undoLedgerImport(){
   if(!lastImport){ toast('没有可撤销的最近一次导入','warn'); return; }
@@ -1699,10 +1943,67 @@ function undoLedgerImport(){
   saveDB(); renderLedger();
   toast('已撤销最近一次导入','success');
 }
-function exportLedger(){
-  const data = DB.ledger.map(r=>({日期:r.date,姓名:r.name,电话:r.phone,应聘职位:r.pos,城市:r.city,面试官:r.interviewer,面试进度:r.progress,Offer:r.offer,入职进度:r.onboard,备注:r.remark}));
-  exportCSV('招聘记录台账_'+today()+'.csv', data);
-  toast('台账已导出，可用 Excel 打开','success');
+async function exportLedger(){
+  const HEADERS = ['日期','姓名','电话','应聘职位','城市','面试官','面试进度','Offer','入职进度','备注'];
+  const rows = DB.ledger.map(r=>({
+    '日期':r.date,'姓名':r.name,'电话':r.phone,'应聘职位':r.pos,'城市':r.city,
+    '面试官':r.interviewer,'面试进度':r.progress,'Offer':r.offer,'入职进度':r.onboard,'备注':r.remark
+  }));
+  if(!rows.length){ toast('台账无数据可导出','warn'); return; }
+  // sharedStrings 去重收集
+  const ss = []; const ssIdx = new Map();
+  function getSS(s){ if(!ssIdx.has(s)){ ssIdx.set(s, ss.length); ss.push(s); } return ssIdx.get(s); }
+  // 表头预先入池
+  HEADERS.forEach(h => getSS(h));
+  // 构建 sheet 行
+  const sheetRows = [];
+  sheetRows.push('<row r="1">'+HEADERS.map((h,i)=>`<c r="${colToLetters(i)}1" t="s"><v>${getSS(h)}</v></c>`).join('')+'</row>');
+  rows.forEach((r, ri)=>{
+    const rowIdx = ri + 2;
+    const cells = HEADERS.map((h, i)=>{
+      const ref = colToLetters(i) + rowIdx;
+      const v = r[h] || '';
+      const isDate = h==='日期' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+      if (v === '' || v == null) return `<c r="${ref}"/>`;
+      if (isDate){
+        // Excel 日期序列号：1899-12-30 起算
+        const serial = (new Date(v).getTime() - new Date('1899-12-30T00:00:00Z').getTime()) / 86400000;
+        return `<c r="${ref}" s="1"><v>${serial}</v></c>`;
+      }
+      return `<c r="${ref}" t="s"><v>${getSS(v)}</v></c>`;
+    }).join('');
+    sheetRows.push(`<row r="${rowIdx}">${cells}</row>`);
+  });
+  // 组装各 XML 部件
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows.join('')}</sheetData></worksheet>`;
+  const sharedStringsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${ss.length}" uniqueCount="${ss.length}">${ss.map(s=>`<si><t xml:space="preserve">${xmlEscape(s)}</t></si>`).join('')}</sst>`;
+  const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+  const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>`;
+  const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>`;
+  // 包含日期样式（数字格式 yyyy-mm-dd）
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="14" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/></cellXfs></styleSheet>`;
+  const files = [
+    {name:'[Content_Types].xml', content: new TextEncoder().encode(contentTypesXml)},
+    {name:'_rels/.rels', content: new TextEncoder().encode(rootRelsXml)},
+    {name:'xl/workbook.xml', content: new TextEncoder().encode(workbookXml)},
+    {name:'xl/_rels/workbook.xml.rels', content: new TextEncoder().encode(workbookRelsXml)},
+    {name:'xl/styles.xml', content: new TextEncoder().encode(stylesXml)},
+    {name:'xl/sharedStrings.xml', content: new TextEncoder().encode(sharedStringsXml)},
+    {name:'xl/worksheets/sheet1.xml', content: new TextEncoder().encode(sheetXml)}
+  ];
+  try{
+    const zipBytes = await buildZip(files);
+    const blob = new Blob([zipBytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '招聘记录台账_'+today()+'.xlsx';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},200);
+    toast('已导出 '+rows.length+' 条记录为 Excel 文件','success');
+  }catch(err){
+    toast('导出失败：'+err.message+'（可改用 CSV：'+err.message+'）','error');
+  }
 }
 function parseCSV(text){
   const rows=[]; let row=[], cur='', inQ=false;
