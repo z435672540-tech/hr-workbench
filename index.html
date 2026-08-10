@@ -43,6 +43,14 @@ input,select,textarea{font-family:var(--font);outline:none}
 .nav-sub .nav-item{padding:8px 12px;font-size:13px}
 .nav-sep{font-size:11px;color:var(--text3);padding:10px 12px 6px;letter-spacing:1px}
 .side-foot{padding:14px;border-top:1px solid var(--line)}
+.upd-bar{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);cursor:pointer;user-select:none;padding:5px 6px;margin-bottom:8px;border-radius:8px;transition:all .2s}
+.upd-bar:hover{color:var(--primary);background:rgba(107,93,231,.07)}
+.upd-dot{width:8px;height:8px;border-radius:50%;background:#c8c8d0;flex-shrink:0;transition:background .3s}
+.upd-dot.checking{background:#F5A623;animation:updBlink .9s infinite}
+.upd-dot.available{background:#F54336;box-shadow:0 0 0 3px rgba(245,67,54,.18)}
+.upd-dot.none{background:#4CAF50}
+.upd-dot.error{background:#F54336}
+@keyframes updBlink{0%,100%{opacity:1}50%{opacity:.3}}
 .user-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--bg);cursor:pointer}
 .user-chip:hover{background:var(--primary-soft)}
 .user-ava{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
@@ -360,6 +368,10 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
       <div class="nav-item" data-page="positions"><span class="ico">📌</span><span>职位库</span></div>
     </nav>
     <div class="side-foot">
+      <div class="upd-bar" id="updBar" onclick="checkUpdate()" title="点击检查新版本（桌面版支持自动更新）">
+        <span class="upd-dot" id="updDot"></span>
+        <span id="updText">检查更新</span>
+      </div>
       <div class="user-chip" id="userChip" title="点击修改用户ID">
         <div class="user-ava" id="userAva">HR</div>
         <div class="flex-col">
@@ -2606,6 +2618,41 @@ function saveUid(){
   if(!v){ toast('用户ID不能为空','warn'); return; }
   DB.userId = v; saveDB(); renderUid(); closeModal('uidMask');
   toast('用户ID已更新为 '+v,'success');
+}
+
+/* ---------- 检测更新（桌面版支持，网页版提示） ---------- */
+const isDesktopApp = typeof window!=='undefined' && !!window.appBridge;
+function setUpd(state, text){
+  const dot = $('#updDot'), tx = $('#updText');
+  if(!dot) return;
+  dot.className = 'upd-dot'+(state?' '+state:'');
+  if(text!==undefined) tx.textContent = text;
+}
+function checkUpdate(){
+  if(!isDesktopApp){
+    toast('当前是网页版，始终为最新版，无需更新；自动更新仅桌面版支持','warn');
+    return;
+  }
+  setUpd('checking','正在检测…');
+  window.appBridge.checkForUpdates();
+}
+if(isDesktopApp){
+  window.appBridge.onUpdateEvent(e=>{
+    if(!e || !e.type) return;
+    if(e.type==='available'){
+      setUpd('available','发现新版本 v'+e.version);
+      confirmBox('发现新版本','已发现新版本 v'+e.version+'，正在后台自动下载更新…','知道了',null,false);
+    }else if(e.type==='downloaded'){
+      setUpd('available','新版本已就绪');
+      confirmBox('更新完成','新版本已下载完成，重启应用后生效。','立即重启',()=>{ window.appBridge.quitAndInstall(); },false);
+    }else if(e.type==='not-available'){
+      setUpd('none','已是最新版本');
+      setTimeout(()=>toast('当前已是最新版本 v'+APP_VERSION,'success'), 400);
+    }else if(e.type==='error'){
+      setUpd('error','检查更新失败');
+      toast('检查更新失败：'+(e.msg||'网络异常，请稍后重试'),'error');
+    }
+  });
 }
 
 /* ================================================================
