@@ -1898,45 +1898,61 @@ function importLedger(){
 }
 function processImportedRows(rows, filename){
   if(!rows || !rows.length){ toast('文件为空或无法解析','error'); return; }
-  // 智能表头识别：寻找包含 姓名/日期 等关键字的那一行（兼容 Excel 模板中前面有空行的情况）
+  // 表头行识别：只要某行包含 姓名/名字/日期/电话 等特征词，就当作表头（兼容各种模板）
+  const isHeaderRow = row => row.some(c => {
+    const s = String(c).trim();
+    return /姓名|名字|人选|候选人|日期|时间|电话|手机|职位|岗位|城市|面试官|面试进度|进度|结果|offer|备注|入职|推荐/.test(s);
+  });
   let headerIdx = 0;
-  const headerKeys = ['姓名','日期','电话','应聘职位','职位','城市','面试官','面试进度','入职进度','offer','备注','姓名/Name','候选人','应聘者','Candidate'];
   for (let i = 0; i < Math.min(5, rows.length); i++){
-    if (rows[i].some(c => headerKeys.includes(String(c).trim()))){
-      headerIdx = i; break;
-    }
+    if (isHeaderRow(rows[i])){ headerIdx = i; break; }
   }
   const headers = rows[headerIdx].map(h=>String(h).trim());
   const dataRows = rows.slice(headerIdx + 1);
   if (!dataRows.length){ toast('未识别到数据行（识别到的列：'+headers.slice(0,5).join(',')+'）','warn'); return; }
   lastImport = {before: DB.ledger.slice()};
-  // 字段映射：兼容多种列名写法（同义词 / 中英混合 / 简繁）
-  const map = {
-    '姓名':'name','候选人':'name','应聘者':'name','名字':'name','Name':'name','NAME':'name','Candidate':'name','name':'name',
-    '电话':'phone','手机':'phone','联系电话':'phone','phone':'phone','mobile':'phone','tel':'phone',
+  // 字段映射：先精确匹配，再按关键词子串匹配（兼容"推荐日期/人选名字/电话号码"等各种表头写法）
+  const exactMap = {
+    '姓名':'name','候选人':'name','应聘者':'name','名字':'name','人选名字':'name','候选人姓名':'name','Name':'name','NAME':'name','Candidate':'name','name':'name',
+    '电话':'phone','手机':'phone','联系电话':'phone','电话号码':'phone','手机号码':'phone','phone':'phone','mobile':'phone','tel':'phone',
     '应聘职位':'pos','岗位':'pos','职位':'pos','position':'pos','job':'pos',
     '城市':'city','地区':'city','city':'city','location':'city',
-    '面试官':'interviewer','面试官/HR':'interviewer','interviewer':'interviewer',
-    '日期':'date','面试日期':'date','日期/Date':'date','date':'date',
+    '面试官':'interviewer','interviewer':'interviewer',
+    '日期':'date','面试日期':'date','推荐日期':'date','date':'date',
     '面试时间':'date',
     '面试进度':'progress','面试结果':'progress','进度':'progress','progress':'progress',
     '入职进度':'onboard','入职状态':'onboard','入职':'onboard','onboard':'onboard',
     'Offer':'offer','offer':'offer','offer状态':'offer',
-    '备注':'remark','说明':'remark','备注/Remarks':'remark','remark':'remark','notes':'remark',
+    '备注':'remark','说明':'remark','remark':'remark','notes':'remark',
     '推荐/到面':'progress'
   };
+  function matchKey(h){
+    if (exactMap[h]) return exactMap[h];
+    if (/姓名|名字|人选|候选人|Name|Candidate/i.test(h)) return 'name';
+    if (/电话|手机|Phone|Mobile|Tel/i.test(h)) return 'phone';
+    if (/职位|岗位|Position|Job|应聘/i.test(h)) return 'pos';
+    if (/城市|地区|City|Location/i.test(h)) return 'city';
+    if (/面试官|Interviewer/i.test(h)) return 'interviewer';
+    if (/日期|Date|时间/i.test(h)) return 'date';
+    if (/面试进度|面试结果|进度|结果|Progress/i.test(h)) return 'progress';
+    if (/入职|Onboard/i.test(h)) return 'onboard';
+    if (/Offer/i.test(h)) return 'offer';
+    if (/备注|说明|Remark|Notes/i.test(h)) return 'remark';
+    if (/推荐|到面/.test(h)) return 'progress';
+    return h;
+  }
   let added = 0;
   let firstRowSample = null;
   dataRows.forEach((r, idx)=>{
     const rec = {};
     headers.forEach((h, i)=>{
-      const k = map[h]||h;
+      const k = matchKey(h);
       let v = String(r[i]||'').trim();
       // 无年份日期按2026年
       if (k==='date' && v && !/^\d{4}-/.test(v)){
         const m = v.match(/(\d{1,2})[.\/-](\d{1,2})/);
         if (m) v = '2026-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
-        // Excel 日期序列号（如 45292）→ 转 2026-年份日期
+        // Excel 日期序列号（如 45292）→ 转 2026 年日期
         if (m===null && /^\d{4,5}(\.\d+)?$/.test(v)){
           const serial = parseFloat(v);
           if (serial > 0 && serial < 100000){
@@ -1962,7 +1978,7 @@ function processImportedRows(rows, filename){
   saveDB(); renderLedger(); renderWorkbench();
   // 增强诊断：0 条时给出明确原因
   if (added === 0){
-    const colsList = headers.map((h,i)=>`${h}→${map[h]||'?'}`).join(' / ');
+    const colsList = headers.map((h,i)=>`${h}→${matchKey(h)}`).join(' / ');
     const reason = !dataRows.length ? '无数据行' :
                    !firstRowSample ? '首行无姓名' :
                    '数据行缺少姓名（请检查首行示例：'+JSON.stringify(firstRowSample).slice(0,80)+'）';
