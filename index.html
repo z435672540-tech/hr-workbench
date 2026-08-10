@@ -1005,47 +1005,57 @@ async function parseXlsx(arrayBuffer){
   let ssItems = [];
   if (ssBytes){
     const ssXml = new TextDecoder('utf-8').decode(ssBytes);
-    const ssDoc = new DOMParser().parseFromString(ssXml, 'text/xml');
-    ssItems = [...ssDoc.querySelectorAll('si')].map(si => {
-      // 处理富文本（多 t/r/t）—— 简化：拼接所有 t
-      return [...si.querySelectorAll('t')].map(t=>t.textContent).join('') || si.textContent || '';
-    });
+    // 用正则解析 sharedStrings，不依赖 DOMParser（避免命名空间兼容性问题）
+    const siRe = /<si>([\s\S]*?)<\/si>/g;
+    const tRe = /<t[^>]*>([\s\S]*?)<\/t>/g;
+    let m;
+    while ((m = siRe.exec(ssXml)) !== null){
+      const inner = m[1];
+      let text = '';
+      let tm;
+      const tRe2 = /<t[^>]*>([\s\S]*?)<\/t>/g;
+      while ((tm = tRe2.exec(inner)) !== null) text += tm[1];
+      ssItems.push(text);
+    }
   }
-  // 解析 sheet rows
-  const sheetDoc = new DOMParser().parseFromString(sheetXml, 'text/xml');
-  const rows = [...sheetDoc.querySelectorAll('row')];
+  // 用正则解析 sheet 行/单元格（兼容带命名空间与各种单元格类型）
   const out = [];
-  rows.forEach(row => {
-    const cells = [...row.querySelectorAll('c')];
+  const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g;
+  let rm;
+  while ((rm = rowRe.exec(sheetXml)) !== null){
+    const rowInner = rm[1];
     const rowData = {};
-    cells.forEach(c => {
-      const ref = c.getAttribute('r') || '';
-      const m = ref.match(/^([A-Z]+)/);
-      if (!m) return;
-      const colIdx = lettersToCol(m[1]);
-      const t = c.getAttribute('t') || '';
+    const cellRe = /<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g;
+    let cm;
+    while ((cm = cellRe.exec(rowInner)) !== null){
+      const attrs = cm[1] || cm[3] || '';
+      const inner = cm[2] || '';
+      const refMatch = attrs.match(/r="([A-Z]+\d+)"/);
+      const tMatch = attrs.match(/\bt="([^"]*)"/);
+      if (!refMatch) continue;
+      const colIdx = lettersToCol(refMatch[1].match(/^[A-Z]+/)[0]);
+      const t = tMatch ? tMatch[1] : '';
       let val = '';
       if (t === 's'){
-        const v = c.querySelector('v');
-        const idx = v ? parseInt(v.textContent) : -1;
+        const vMatch = inner.match(/<v>([\s\S]*?)<\/v>/);
+        const idx = vMatch ? parseInt(vMatch[1]) : -1;
         val = (idx >= 0 && idx < ssItems.length) ? ssItems[idx] : '';
       } else if (t === 'inlineStr'){
-        const is = c.querySelector('is');
-        if (is) val = [...is.querySelectorAll('t')].map(x=>x.textContent).join('') || is.textContent || '';
-      } else if (t === 'str'){
-        const v = c.querySelector('v');
-        val = v ? v.textContent : '';
+        let text = '';
+        const tRe3 = /<t[^>]*>([\s\S]*?)<\/t>/g;
+        let tm3;
+        while ((tm3 = tRe3.exec(inner)) !== null) text += tm3[1];
+        val = text;
       } else {
-        // number（含日期序列号）
-        const v = c.querySelector('v');
-        val = v ? v.textContent : '';
+        // t="str" / 数字 / 日期序列号：取 <v> 文本
+        const vMatch = inner.match(/<v>([\s\S]*?)<\/v>/);
+        val = vMatch ? vMatch[1] : '';
       }
       rowData[colIdx] = val;
-    });
+    }
     const keys = Object.keys(rowData).map(Number).sort((a,b)=>a-b);
-    const arr = keys.map(k => rowData[k]);
-    out.push(arr);
-  });
+    out.push(keys.map(k => rowData[k]));
+  }
   return out; // [[headers], [row1], [row2], ...]
 }
 
@@ -1920,9 +1930,11 @@ function processImportedRows(rows, filename){
     '面试官':'interviewer','interviewer':'interviewer',
     '日期':'date','面试日期':'date','推荐日期':'date','date':'date',
     '面试时间':'date',
+    '入职时间':'onboardDate',
     '面试进度':'progress','面试结果':'progress','进度':'progress','progress':'progress',
-    '入职进度':'onboard','入职状态':'onboard','入职':'onboard','onboard':'onboard',
-    'Offer':'offer','offer':'offer','offer状态':'offer',
+    '录用情况':'employ','是否录用':'employ',
+    '入职进度':'onboard','入职状态':'onboard','入职':'onboard','入职情况':'onboard','onboard':'onboard',
+    'Offer':'offer','offer':'offer','offer状态':'offer','Offer情况':'offer',
     '备注':'remark','说明':'remark','remark':'remark','notes':'remark',
     '推荐/到面':'progress'
   };
@@ -1933,8 +1945,10 @@ function processImportedRows(rows, filename){
     if (/职位|岗位|Position|Job|应聘/i.test(h)) return 'pos';
     if (/城市|地区|City|Location/i.test(h)) return 'city';
     if (/面试官|Interviewer/i.test(h)) return 'interviewer';
-    if (/日期|Date|时间/i.test(h)) return 'date';
+    if (/日期|Date/i.test(h)) return 'date';
     if (/面试进度|面试结果|进度|结果|Progress/i.test(h)) return 'progress';
+    if (/录用/i.test(h)) return 'employ';
+    if (/入职时间|OnboardDate/i.test(h)) return 'onboardDate';
     if (/入职|Onboard/i.test(h)) return 'onboard';
     if (/Offer/i.test(h)) return 'offer';
     if (/备注|说明|Remark|Notes/i.test(h)) return 'remark';
@@ -1979,6 +1993,11 @@ function processImportedRows(rows, filename){
       if (h==='推荐/到面' && v==='通过') rec.progress = '通过';
       rec[k] = v;
     });
+    // 面试进度为空但"录用情况=是" → 视为面试通过/已到面
+    if (!rec.progress && rec.employ === '是') rec.progress = '通过';
+    // 入职时间有具体日期 → 代表已入职
+    if (rec.onboardDate && !rec.onboard) rec.onboard = '已入职';
+    // 有初面记录但没有后续进度 → 放弃复试
     if (!rec.progress && rec.remark && /初面|一面/.test(rec.remark)) rec.progress = '放弃复试';
     if (rec.onboard==='已入职' && !rec.date) rec.date = today();
     if (rec.progress==='通过' && !rec.onboard && !rec.offer) rec.offer = '拒绝';
