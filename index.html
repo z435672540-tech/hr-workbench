@@ -178,6 +178,8 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;mi
 .resume-modal .modal-head{flex-shrink:0}
 .resume-body-scroll{flex:1;overflow-y:auto;min-height:0;background:#FCFCFE;border-radius:0 0 16px 16px}
 .resume-sheet{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 26px;max-width:860px;margin:0 auto;box-shadow:0 2px 8px rgba(43,45,80,.05);font-size:13.5px;line-height:1.9;color:var(--text)}
+.resume-layout{display:flex;flex-direction:column;gap:14px}
+.resume-embed{width:100%;height:62vh;min-height:420px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .resume-sheet .rs-head{border-bottom:2px solid var(--primary);padding-bottom:12px;margin-bottom:14px}
 .resume-sheet .rs-name{font-size:20px;font-weight:700;color:var(--text)}
 .resume-sheet .rs-basic{font-size:12.5px;color:var(--text2);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
@@ -729,13 +731,14 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
           <button data-v="7" onclick="setRange('7')">7天</button>
           <button data-v="30" onclick="setRange('30')">30天</button>
         </div>
-        <div class="hint">演示收取时按所选天数过滤演示简历（网页版无法直接读取真实邮箱邮件）</div>
+        <div class="hint">收取时只导入最近 N 天内收到的简历邮件</div>
       </div>
-      <div class="hint" style="color:var(--red-text)">⚠ 网页版受浏览器安全限制，无法直接连接邮箱读取真实邮件。真实简历请用「手动上传」或「邮箱下载附件后导入」。</div>
+      <div class="hint" id="mailCapHint"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('mailMask')">取消</button>
       <button class="btn btn-primary" onclick="saveMail()">保存绑定</button>
+      <button class="btn btn-soft" onclick="receiveMail()">📥 立即收取</button>
     </div>
   </div>
 </div>
@@ -1111,6 +1114,52 @@ async function parseXlsx(arrayBuffer){
 function $(s){ return document.querySelector(s); }
 function $$(s){ return document.querySelectorAll(s); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---- IndexedDB：网页版保存简历原件（大文件，localStorage 放不下） ---- */
+const idbStore = {
+  db: null,
+  open(){
+    return new Promise((res, rej)=>{
+      if(this.db) return res(this.db);
+      const r = indexedDB.open('hr_workbench_files', 1);
+      r.onupgradeneeded = ()=>{ r.result.createObjectStore('files'); };
+      r.onsuccess = ()=>{ this.db = r.result; res(this.db); };
+      r.onerror = ()=>rej(r.error);
+    });
+  },
+  put(key, val){
+    return this.open().then(db=>new Promise((res, rej)=>{
+      const tx = db.transaction('files','readwrite');
+      tx.objectStore('files').put(val, key);
+      tx.oncomplete = ()=>res();
+      tx.onerror = ()=>rej(tx.error);
+    }));
+  },
+  get(key){
+    return this.open().then(db=>new Promise((res, rej)=>{
+      const rq = db.transaction('files','readonly').objectStore('files').get(key);
+      rq.onsuccess = ()=>res(rq.result);
+      rq.onerror = ()=>rej(rq.error);
+    }));
+  }
+};
+/* 把 base64 转 Blob URL */
+function base64ToBlobUrl(base64, type){
+  try{
+    const bin = atob(base64);
+    const arr = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([arr], {type: type||'application/pdf'}));
+  }catch(e){ return null; }
+}
+function fileToBase64(file){
+  return new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(String(r.result).split(',')[1]||'');
+    r.onerror = ()=>rej(r.error);
+    r.readAsDataURL(file);
+  });
+}
 function toast(msg,type='info'){
   const w = $('#toastWrap');
   const t = document.createElement('div');
@@ -1341,24 +1390,54 @@ function openResume(id){
   });
   if(!workLines.length) workHtml = '<p class="text3">暂无工作经历信息</p>';
   $('#resumeBody').innerHTML = `
-    <div class="resume-sheet">
-      <div class="rs-head">
-        <div class="rs-name">${esc(c.name)}${c.age?`<span style="font-size:15px;color:var(--text3);font-weight:400;margin-left:8px">${c.age}岁</span>`:''}</div>
-        <div class="rs-basic">
-          <span>🎯 目标职位：${esc(c.pos||'未填写')}</span>
-          <span>📮 来源：${esc(c.source||'')}</span>
-          ${c.score?`<span>📊 AI评分：${c.score}分 / ${c.level}级</span>`:''}
-          <span>📧 ${esc(c.emailTitle||'')}</span>
+    <div class="resume-layout">
+      <div id="resumeOriginal"></div>
+      <div class="resume-sheet">
+        <div class="rs-head">
+          <div class="rs-name">${esc(c.name)}${c.age?`<span style="font-size:15px;color:var(--text3);font-weight:400;margin-left:8px">${c.age}岁</span>`:''}</div>
+          <div class="rs-basic">
+            <span>🎯 目标职位：${esc(c.pos||'未填写')}</span>
+            <span>📮 来源：${esc(c.source||'')}</span>
+            ${c.score?`<span>📊 AI评分：${c.score}分 / ${c.level}级</span>`:''}
+            <span>📧 ${esc(c.emailTitle||'')}</span>
+          </div>
         </div>
+        <div class="rs-sec">工作经历</div>
+        ${workHtml}
+        <div class="rs-sec">AI 分析</div>
+        <p>${esc(c.extra||'暂无')}</p>
+        ${c.reason?`<p>✅ 推荐理由：${esc(c.reason)}</p>`:''}
+        ${c.failReason?`<p style="color:var(--red-text)">⛔ 不通过原因：${esc(c.failReason)}</p>`:''}
       </div>
-      <div class="rs-sec">工作经历</div>
-      ${workHtml}
-      <div class="rs-sec">AI 分析</div>
-      <p>${esc(c.extra||'暂无')}</p>
-      ${c.reason?`<p>✅ 推荐理由：${esc(c.reason)}</p>`:''}
-      ${c.failReason?`<p style="color:var(--red-text)">⛔ 不通过原因：${esc(c.failReason)}</p>`:''}
     </div>`;
   showModal('resumeMask');
+  loadResumeOriginal(c);
+}
+// 加载简历原件预览（PDF 内嵌显示；Word 提示不可在线预览）
+function loadResumeOriginal(c){
+  const box = $('#resumeOriginal');
+  if(!box) return;
+  const att = c.attachment;
+  if(!att){ box.innerHTML = ''; return; }
+  const head = `<div class="rs-sec">简历原件 <span class="text3" style="font-weight:400">（${esc(att.name||'')}）</span></div>`;
+  if(att.idbKey){
+    // 网页版：从 IndexedDB 读取
+    box.innerHTML = head + '<p class="text3">加载原件中…</p>';
+    idbStore.get(att.idbKey).then(d=>{
+      if(!d){ box.innerHTML = head + '<p class="text3">原件读取失败</p>'; return; }
+      const url = base64ToBlobUrl(d.base64, d.type||att.type);
+      box.innerHTML = head + (url && (d.type||'').includes('pdf') ? `<embed class="resume-embed" src="${url}" type="application/pdf">` : '<p class="text3">Word 文档暂不支持在线预览，请下载后查看</p>');
+    }).catch(()=>{ box.innerHTML = head + '<p class="text3">原件读取失败</p>'; });
+  }else if(att.path){
+    // 桌面版：主进程读取本地文件
+    if(!window.appBridge){ box.innerHTML = ''; return; }
+    box.innerHTML = head + '<p class="text3">加载原件中…</p>';
+    window.appBridge.readResumeFile(att.path).then(r=>{
+      if(!r || !r.ok){ box.innerHTML = head + '<p class="text3">原件读取失败</p>'; return; }
+      const url = base64ToBlobUrl(r.base64, r.type);
+      box.innerHTML = head + (url && r.type==='application/pdf' ? `<embed class="resume-embed" src="${url}" type="application/pdf">` : '<p class="text3">Word 文档暂不支持在线预览，原件已保存在本机，可用 Word 打开查看</p>');
+    }).catch(()=>{ box.innerHTML = head + '<p class="text3">原件读取失败</p>'; });
+  }
 }
 function judgeCand(st){
   if(!currentCand) return;
@@ -1379,6 +1458,17 @@ function openMailModal(){
   // 导入范围天数
   const range = DB.email.range || 7;
   $$('#rangeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===String(range)));
+  // 环境提示
+  const hint = $('#mailCapHint');
+  if(hint){
+    if(isDesktopApp){
+      hint.style.color = 'var(--green-text)';
+      hint.innerHTML = '✅ 桌面版已开启<b>真实邮箱收取</b>：自动连接你的邮箱（IMAP）拉取简历邮件并保存原件。QQ/163/126/Outlook/Gmail 等邮箱自动识别服务器。<br>如连接失败：请在邮箱「设置 → 开启 IMAP 服务」并获取<b>授权码</b>（不要填登录密码）。';
+    }else{
+      hint.style.color = 'var(--red-text)';
+      hint.innerHTML = '⚠ 网页版受浏览器安全限制，无法连接邮箱读取真实邮件。真实简历请用「手动上传」，或下载安装桌面版（内置真实邮箱收取）。';
+    }
+  }
   showModal('mailMask');
 }
 function renderMailState(){
@@ -1390,6 +1480,13 @@ function renderMailState(){
 }
 function setAuto(v){ DB.email.auto = v; $$('#autoSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===String(v))); }
 function setRange(v){ DB.email.range = Number(v); $$('#rangeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===String(v))); }
+function getRealPwd(inputPwd){
+  if(inputPwd) return inputPwd;
+  if(DB.email.pwd){
+    try{ return atob(DB.email.pwd).replace(/^hr_/,''); }catch(e){}
+  }
+  return '';
+}
 function saveMail(){
   const addr = $('#mailAddr').value.trim();
   const pwd = $('#mailPwd').value;
@@ -1398,16 +1495,56 @@ function saveMail(){
   DB.email.addr = addr;
   DB.email.bound = true;
   DB.email.range = DB.email.range || 7;
+  DB.email.seenMails = DB.email.seenMails || [];
   if(pwd) DB.email.pwd = btoa('hr_'+pwd); // 非明文存储（演示用简单编码，实际桌面应用使用系统加密）
+  // 桌面版：同步配置给主进程（供真实收取 + 定时收取）
+  if(isDesktopApp && window.appBridge){
+    window.appBridge.saveMailConfig({
+      bound: true, addr, pwd: getRealPwd(pwd),
+      auto: DB.email.auto||'off', range: DB.email.range, seenMails: DB.email.seenMails
+    });
+  }
   saveDB(); renderMailState(); renderWorkbench(); closeModal('mailMask');
   toast('邮箱绑定成功，绿色状态灯已点亮','success');
 }
 function receiveMail(){
   if(!DB.email.bound){ toast('请先绑定邮箱','warn'); openMailModal(); return; }
-  // 网页版受浏览器安全限制，无法直接连接邮箱服务器读取真实邮件。
-  // 明确告知用户，并提供真实可用的替代方案；如需体验流程可加载演示数据。
+  if(isDesktopApp && window.appBridge){
+    // ===== 桌面版：真实邮箱收取（IMAP） =====
+    const pwd = getRealPwd($('#mailPwd').value);
+    if(!pwd){ toast('需要填写授权码（或先保存绑定）','warn'); openMailModal(); return; }
+    const rangeDays = DB.email.range || 7;
+    showLoading(); toast('正在连接邮箱收取简历邮件…','info');
+    window.appBridge.fetchMails({ addr: DB.email.addr, pwd, rangeDays, seenKeys: DB.email.seenMails||[] }).then(res=>{
+      hideLoading();
+      if(!res || !res.ok){ toast('收取失败：'+(res&&res.error||'未知错误'),'error'); return; }
+      DB.email.seenMails = DB.email.seenMails || [];
+      let added = 0;
+      (res.results||[]).forEach(r=>{
+        if(DB.email.seenMails.includes(r.key)) return;
+        DB.email.seenMails.push(r.key);
+        DB.candidates.unshift({
+          id:uid(), name:r.name||'未识别姓名', age:null, pos:'待分类',
+          emailTitle:r.subject||'', source:r.platform||'邮件简历',
+          score:null, level:null, status:'new',
+          work:r.text||'（已保存简历原件，待查看）',
+          attachment:r.attachment||null,
+          reason:'',failReason:'',extra:'邮件收取', fromMail:true, createdAt:Date.now()
+        });
+        added++;
+      });
+      if(DB.email.seenMails.length > 2000) DB.email.seenMails = DB.email.seenMails.slice(-2000);
+      if(isDesktopApp && window.appBridge){
+        window.appBridge.saveMailConfig({ bound:true, addr:DB.email.addr, pwd, auto:DB.email.auto||'off', range:DB.email.range, seenMails:DB.email.seenMails });
+      }
+      saveDB(); renderWorkbench(); renderTalent();
+      toast(`收取完成（${res.host||''}）：新增 ${added} 份简历，已跳过 ${res.skipped||0} 封已处理、${res.noResume||0} 封无附件`, added?'success':'info');
+    }).catch(e=>{ hideLoading(); toast('收取失败：'+e.message,'error'); });
+    return;
+  }
+  // ===== 网页版：诚实说明（浏览器无法连邮箱） =====
   confirmBox('无法直接收取邮箱邮件',
-    '网页版受浏览器安全限制，无法直接连接你的邮箱服务器读取真实邮件（需桌面应用或后端服务才能实现）。\n\n两个真实可用的方案：\n① 手动上传简历：人才库 → 「⬆ 手动上传简历」，选择 PDF/Word 简历文件\n② 邮箱转发：在邮箱里把简历邮件转发/下载到本地，再用手动上传导入\n\n是否加载一批「演示简历」体验收取流程？（会明确标注为演示数据）',
+    '网页版受浏览器安全限制，无法直接连接你的邮箱服务器读取真实邮件。\n\n两个真实可用的方案：\n① 手动上传简历：人才库 → 「⬆ 手动上传简历」，选择 PDF/Word 简历文件\n② 下载安装桌面版（Windows/Mac 安装包），内置真实邮箱收取（IMAP）\n\n是否加载一批「演示简历」体验收取流程？（会明确标注为演示数据）',
     '加载演示简历',()=>{
     showLoading();
     setTimeout(()=>{
@@ -1444,6 +1581,29 @@ function receiveMail(){
     }, 600);
   });
 }
+// 桌面版：主进程定时收取的结果推送 → 自动加入人才库
+if(isDesktopApp && window.appBridge){
+  window.appBridge.onMailResult(res=>{
+    if(!res || !res.ok || !res.results || !res.results.length) return;
+    DB.email.seenMails = DB.email.seenMails || [];
+    let added = 0;
+    res.results.forEach(r=>{
+      if(DB.email.seenMails.includes(r.key)) return;
+      DB.email.seenMails.push(r.key);
+      DB.candidates.unshift({
+        id:uid(), name:r.name||'未识别姓名', age:null, pos:'待分类',
+        emailTitle:r.subject||'', source:r.platform||'邮件简历',
+        score:null, level:null, status:'new',
+        work:r.text||'（已保存简历原件，待查看）',
+        attachment:r.attachment||null,
+        reason:'',failReason:'',extra:'邮件收取', fromMail:true, createdAt:Date.now()
+      });
+      added++;
+    });
+    saveDB(); renderWorkbench(); renderTalent();
+    if(added) toast(`定时收取完成：新增 ${added} 份简历`,'success');
+  });
+}
 
 /* ---------- 上传 ---------- */
 let uploadFiles = [];
@@ -1456,19 +1616,54 @@ function openUploadModal(){
 function handleUpload(input){
   uploadFiles = Array.from(input.files||[]);
 }
-function doUpload(){
+async function doUpload(){
   if(!uploadFiles.length){ toast('请先选择简历文件','warn'); return; }
   const pos = $('#uploadPos').value;
-  uploadFiles.forEach(f=>{
-    const name = f.name.replace(/\.[^.]+$/,'');
-    DB.candidates.unshift({
-      id:uid(), name, age:null, pos:pos||'待分类',
-      emailTitle:'手动上传：'+f.name, source:'手动上传', score:null, level:null, status:'new',
-      work:'（手动上传简历，文件名：'+f.name+'）', reason:'',failReason:'',extra:'手动上传', createdAt:Date.now()
-    });
-  });
-  saveDB(); closeModal('uploadMask'); renderTalent(); renderWorkbench();
-  toast('成功上传 '+uploadFiles.length+' 份简历','success');
+  const list = uploadFiles.slice();
+  if(isDesktopApp && window.appBridge){
+    // ===== 桌面版：保存原件到本地 + 提取简历文本 =====
+    showLoading();
+    let okCount = 0, failCount = 0;
+    for(const f of list){
+      try{
+        const base64 = await fileToBase64(f);
+        const r = await window.appBridge.saveResumeFile({ fileName: f.name, base64 });
+        if(!r || !r.ok) throw new Error(r&&r.error||'保存失败');
+        const name = f.name.replace(/\.[^.]+$/,'');
+        DB.candidates.unshift({
+          id:uid(), name, age:null, pos:pos||'待分类',
+          emailTitle:'手动上传：'+f.name, source:'手动上传', score:null, level:null, status:'new',
+          work:r.text || ('（已保存简历原件，待查看）'),
+          attachment:{ path:r.path, name:f.name, type: f.type||'' },
+          reason:'',failReason:'',extra:'手动上传', createdAt:Date.now()
+        });
+        okCount++;
+      }catch(e){ failCount++; }
+    }
+    saveDB(); closeModal('uploadMask'); renderTalent(); renderWorkbench(); hideLoading();
+    toast(okCount?'成功上传 '+okCount+' 份简历（原件已保存，点击候选人可预览）':'上传失败 '+failCount+' 份', okCount?'success':'error');
+  }else{
+    // ===== 网页版：保存原件到 IndexedDB =====
+    showLoading();
+    let okCount = 0;
+    for(const f of list){
+      try{
+        const base64 = await fileToBase64(f);
+        const id = uid();
+        await idbStore.put(id, { base64, type: f.type||'application/pdf', name: f.name });
+        const name = f.name.replace(/\.[^.]+$/,'');
+        DB.candidates.unshift({
+          id:uid(), name, age:null, pos:pos||'待分类',
+          emailTitle:'手动上传：'+f.name, source:'手动上传', score:null, level:null, status:'new',
+          work:'（已保存简历原件，待查看）', reason:'',failReason:'',extra:'手动上传', createdAt:Date.now(),
+          attachment:{ idbKey:id, name:f.name, type:f.type||'application/pdf' }
+        });
+        okCount++;
+      }catch(e){}
+    }
+    saveDB(); closeModal('uploadMask'); renderTalent(); renderWorkbench(); hideLoading();
+    toast('成功上传 '+okCount+' 份简历（原件已保存，点击候选人可预览）','success');
+  }
 }
 function exportTalent(){
   const data = DB.candidates.map(c=>({姓名:c.name,年龄:c.age||'',职位:c.pos||'',邮件标题:c.emailTitle||'',来源:c.source||'',评分:c.score||'',等级:c.level||'',状态:c.status||'',工作经历:c.work||'',推荐理由:c.reason||'',不通过原因:c.failReason||''}));
