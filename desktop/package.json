@@ -16,7 +16,11 @@
     "electron-builder": "^24.13.3"
   },
   "dependencies": {
-    "electron-updater": "^6.3.0"
+    "electron-updater": "^6.3.0",
+    "imapflow": "^1.6.6",
+    "mailparser": "^3.9.15",
+    "mammoth": "^1.12.1",
+    "pdf-parse": "^2.4.5"
   },
   "build": {
     "appId": "com.hr.workbench",
@@ -26,6 +30,7 @@
     },
     "files": [
       "main.js",
+      "mailer.js",
       "preload.js",
       "index.html",
       "assets/**/*"
@@ -34,7 +39,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico",
@@ -49,7 +56,10 @@
       "shortcutName": "Hr招聘工作台"
     },
     "mac": {
-      "target": ["zip", "dmg"],
+      "target": [
+        "zip",
+        "dmg"
+      ],
       "icon": "assets/icon.png",
       "category": "public.app-category.business"
     },
