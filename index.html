@@ -826,7 +826,7 @@ textarea.input{resize:vertical;min-height:80px;line-height:1.7}
 /* ================================================================
  * Hr招聘工作台 v1.0.0 — 本地数据持久化版本
  * ================================================================ */
-const APP_VERSION = 'v1.0.1';
+const APP_VERSION = 'v1.0.2';
 const LS_KEY = 'hr_workbench_v1';
 const PAGE_SIZE = 20;
 
@@ -1111,6 +1111,8 @@ async function parseXlsx(arrayBuffer){
 }
 
 /* ---------- 工具 ---------- */
+/* 桌面版检测（声明必须最靠前，后续所有代码都依赖它，避免 TDZ 中断） */
+const isDesktopApp = typeof window!=='undefined' && !!window.appBridge;
 function $(s){ return document.querySelector(s); }
 function $$(s){ return document.querySelectorAll(s); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -2816,7 +2818,6 @@ function saveUid(){
 }
 
 /* ---------- 检测更新（桌面版支持，网页版提示） ---------- */
-const isDesktopApp = typeof window!=='undefined' && !!window.appBridge;
 function setUpd(state, text){
   const dot = $('#updDot'), tx = $('#updText');
   if(!dot) return;
